@@ -1,0 +1,6 @@
+{
+  "name": "KasMasjid",
+  "description": "Sistem administrasi kas dan inventaris DKM Masjid dengan pembagian peran terintegrasi, laporan transparansi jemaah, dan modul ekspor kode Google Apps Script.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
