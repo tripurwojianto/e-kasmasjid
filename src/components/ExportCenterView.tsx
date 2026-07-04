@@ -6,14 +6,21 @@
 import React, { useState } from 'react';
 import { jsPDF } from 'jspdf';
 import { gasCodeGS, gasIndexHTML, gasPublicHTML } from '../gasTemplates';
+<<<<<<< HEAD
 import { KasMasuk, KasKeluar, InventarisLogistik, RapatPengajuan, User } from '../types';
+=======
+import { KasMasuk, KasKeluar, InventarisLogistik, RapatPengajuan } from '../types';
+>>>>>>> 5c0a7516461135a0c0f8f8c3448d54a199890e9a
 
 interface ExportCenterViewProps {
   kasMasuk: KasMasuk[];
   kasKeluar: KasKeluar[];
   inventaris: InventarisLogistik[];
   proposals: RapatPengajuan[];
+<<<<<<< HEAD
   currentUser: User;
+=======
+>>>>>>> 5c0a7516461135a0c0f8f8c3448d54a199890e9a
 }
 
 export default function ExportCenterView({
@@ -21,7 +28,10 @@ export default function ExportCenterView({
   kasKeluar,
   inventaris,
   proposals,
+<<<<<<< HEAD
   currentUser,
+=======
+>>>>>>> 5c0a7516461135a0c0f8f8c3448d54a199890e9a
 }: ExportCenterViewProps) {
   const [activeCodeTab, setActiveCodeTab] = useState<'Code.gs' | 'Index.html' | 'PublicIndex.html'>('Code.gs');
   const [copied, setCopied] = useState(false);
@@ -470,6 +480,7 @@ export default function ExportCenterView({
     }, 500);
   };
 
+<<<<<<< HEAD
   const isOwner = currentUser.email.trim().toLowerCase() === 'bukukassekolah@gmail.com';
 
   if (!isOwner) {
@@ -592,6 +603,8 @@ export default function ExportCenterView({
     );
   }
 
+=======
+>>>>>>> 5c0a7516461135a0c0f8f8c3448d54a199890e9a
   return (
     <div id="export-center-root" className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Instructions on Left */}

@@ -87,6 +87,7 @@ export default function RoleSimulator({
       {/* Dynamic Instruction banner depending on role */}
       {!isPublicMode && (
         <div className="mt-3 pt-3 border-t border-amber-200/50 text-[11px] text-amber-900 leading-normal space-y-1">
+<<<<<<< HEAD
           <p className="font-extrabold text-amber-950 uppercase tracking-wider text-[10px]">Panduan Peran Pengurus &amp; Akses Sistem:</p>
           <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mt-1.5">
             <li className="bg-emerald-50 border border-emerald-100 p-2 rounded-xl">
@@ -112,6 +113,29 @@ export default function RoleSimulator({
             <li className="bg-amber-50 border border-amber-100 p-2 rounded-xl">
               <span className="font-bold text-amber-800 block">6. Ketua DKM</span>
               <span className="text-slate-600 block mt-0.5">Memantau seluruh laporan &amp; approval pengajuan anggaran</span>
+=======
+          <p className="font-extrabold text-amber-950 uppercase tracking-wider text-[10px]">Panduan Peran Pengurus:</p>
+          <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 mt-1.5">
+            <li className="bg-emerald-50 border border-emerald-100 p-2 rounded-xl">
+              <span className="font-bold text-emerald-800 block">1. Super Admin</span>
+              <span className="text-slate-600 block mt-0.5">Bisa akses source code</span>
+            </li>
+            <li className="bg-blue-50 border border-blue-100 p-2 rounded-xl">
+              <span className="font-bold text-blue-800 block">2. Admin</span>
+              <span className="text-slate-600 block mt-0.5">Bisa edit data masuk/keluar bulanan jika bendahara/sekretaris berhalangan. Tidak bisa akses kode GAS</span>
+            </li>
+            <li className="bg-purple-50 border border-purple-100 p-2 rounded-xl">
+              <span className="font-bold text-purple-800 block">3. Sekretaris</span>
+              <span className="text-slate-600 block mt-0.5">Mencatat administrasi &amp; logistik</span>
+            </li>
+            <li className="bg-rose-50 border border-rose-100 p-2 rounded-xl">
+              <span className="font-bold text-rose-800 block">4. Bendahara</span>
+              <span className="text-slate-600 block mt-0.5">Mencatat keuangan masuk &amp; keluar</span>
+            </li>
+            <li className="bg-amber-50 border border-amber-100 p-2 rounded-xl">
+              <span className="font-bold text-amber-800 block">5. Ketua DKM</span>
+              <span className="text-slate-600 block mt-0.5">Memantau laporan &amp; approval</span>
+>>>>>>> 5c0a7516461135a0c0f8f8c3448d54a199890e9a
             </li>
           </ul>
         </div>

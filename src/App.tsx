@@ -391,7 +391,11 @@ export default function App() {
                 </button>
               )}
 
+<<<<<<< HEAD
               {currentUser.email.trim().toLowerCase() === 'bukukassekolah@gmail.com' && (
+=======
+              {currentUser.email.toLowerCase() === 'bukukassekolah@gmail.com' && (
+>>>>>>> 5c0a7516461135a0c0f8f8c3448d54a199890e9a
                 <button
                   id="tab-export"
                   onClick={() => setActiveTab('export')}
@@ -464,13 +468,20 @@ export default function App() {
                 />
               )}
 
+<<<<<<< HEAD
               {activeTab === 'export' && currentUser.email.trim().toLowerCase() === 'bukukassekolah@gmail.com' && (
+=======
+              {activeTab === 'export' && currentUser.email.toLowerCase() === 'bukukassekolah@gmail.com' && (
+>>>>>>> 5c0a7516461135a0c0f8f8c3448d54a199890e9a
                 <ExportCenterView
                   kasMasuk={kasMasuk}
                   kasKeluar={kasKeluar}
                   inventaris={inventaris}
                   proposals={proposals}
+<<<<<<< HEAD
                   currentUser={currentUser}
+=======
+>>>>>>> 5c0a7516461135a0c0f8f8c3448d54a199890e9a
                 />
               )}
             </div>
