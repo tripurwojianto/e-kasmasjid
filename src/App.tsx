@@ -23,6 +23,8 @@ import PublicTransparansiView from './components/PublicTransparansiView';
 import UserManagementView from './components/UserManagementView';
 import ExportCenterView from './components/ExportCenterView';
 import QrisSimulationView from './components/QrisSimulationView';
+import LaporanBulananView from './components/LaporanBulananView';
+import { Home as HomeIcon, BarChart3, QrCode, Menu as MenuIcon, Lock, LogIn, LogOut, Check } from 'lucide-react';
 
 export default function App() {
   // Load data from localStorage or fallback to mockData
@@ -47,12 +49,27 @@ export default function App() {
 
   const [kasMasuk, setKasMasuk] = useState<KasMasuk[]>(() => {
     const saved = localStorage.getItem('kasmasjid_masuk');
-    return saved ? JSON.parse(saved) : initialKasMasuk;
+    const parsed = saved ? JSON.parse(saved) : initialKasMasuk;
+    return parsed.map((item: any) => {
+      if (item.kategori === 'Infak Jumat') return { ...item, kategori: 'Infaq Jumat' };
+      if (item.kategori === 'Donasi Khusus') return { ...item, kategori: 'Infaq Terikat' };
+      if (item.kategori === 'Sponsor / CSR') return { ...item, kategori: 'Infaq Terikat' };
+      if (item.kategori === 'Kotak Amal Harian') return { ...item, kategori: 'Kotak Amal' };
+      return item;
+    });
   });
 
   const [kasKeluar, setKasKeluar] = useState<KasKeluar[]>(() => {
     const saved = localStorage.getItem('kasmasjid_keluar');
-    return saved ? JSON.parse(saved) : initialKasKeluar;
+    const parsed = saved ? JSON.parse(saved) : initialKasKeluar;
+    return parsed.map((item: any) => {
+      if (item.kategori === 'Kebersihan & Sarpras') return { ...item, kategori: 'Perawatan' };
+      if (item.kategori === 'Penyaluran Zakat & Bansos') return { ...item, kategori: 'Konsumsi' };
+      if (item.kategori === 'Insentif Marbot & Imam') return { ...item, kategori: 'Honor Imam' };
+      if (item.kategori === 'Sosial & Santunan') return { ...item, kategori: 'Konsumsi' };
+      if (item.kategori === 'Listrik & Air') return { ...item, kategori: 'Listrik' };
+      return item;
+    });
   });
 
   const [inventaris, setInventaris] = useState<InventarisLogistik[]>(() => {
@@ -67,7 +84,15 @@ export default function App() {
 
   const [categories, setCategories] = useState<Kategori[]>(() => {
     const saved = localStorage.getItem('kasmasjid_categories');
-    return saved ? JSON.parse(saved) : initialKategori;
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed.some((c: any) => c.namaKategori === 'Infak Jumat' || c.namaKategori === 'Donasi Khusus')) {
+        localStorage.setItem('kasmasjid_categories', JSON.stringify(initialKategori));
+        return initialKategori;
+      }
+      return parsed;
+    }
+    return initialKategori;
   });
 
   // Simulator Sesi User Sesi (Default ke Owner jika ada, fallback ke Super Admin)
@@ -82,8 +107,14 @@ export default function App() {
   // Public view vs Admin View Toggle
   const [isPublicMode, setIsPublicMode] = useState(false);
 
+  // Bottom Navigation tabs for public/guest mode
+  const [publicActiveTab, setPublicActiveTab] = useState<'home' | 'info' | 'donation'>('home');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showAdminLoginModal, setShowAdminLoginModal] = useState(false);
+  const [adminLoginEmail, setAdminLoginEmail] = useState('bukukassekolah@gmail.com');
+
   // Active Tab for Admin Portal
-  const [activeTab, setActiveTab] = useState<'ringkasan' | 'masuk' | 'keluar' | 'logistik' | 'rapat' | 'users' | 'export' | 'qris'>('ringkasan');
+  const [activeTab, setActiveTab] = useState<'ringkasan' | 'masuk' | 'keluar' | 'logistik' | 'rapat' | 'users' | 'export' | 'qris' | 'laporan'>('ringkasan');
 
   // Toaster notifications
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
@@ -245,8 +276,64 @@ export default function App() {
     }
   };
 
+  const handleNavHome = () => {
+    if (isPublicMode) {
+      setPublicActiveTab('home');
+    } else if (currentUser.role === 'Jemaah') {
+      setIsPublicMode(true);
+      setPublicActiveTab('home');
+      showToast('Masuk sebagai Tamu (Akses Read-Only)');
+    } else {
+      setActiveTab('ringkasan');
+    }
+  };
+
+  const handleNavInfo = () => {
+    if (isPublicMode) {
+      setPublicActiveTab('info');
+    } else if (currentUser.role === 'Jemaah') {
+      setIsPublicMode(true);
+      setPublicActiveTab('info');
+      showToast('Masuk sebagai Tamu (Akses Read-Only)');
+    } else {
+      setActiveTab('laporan');
+    }
+  };
+
+  const handleNavDonasi = () => {
+    if (isPublicMode) {
+      setPublicActiveTab('donation');
+    } else if (currentUser.role === 'Jemaah') {
+      setIsPublicMode(true);
+      setPublicActiveTab('donation');
+      showToast('Masuk sebagai Tamu (Akses Read-Only)');
+    } else {
+      setActiveTab('qris');
+    }
+  };
+
+  const handleTriggerAdminCheck = () => {
+    setShowAdminLoginModal(true);
+  };
+
+  const handleVerifyAdminEmail = () => {
+    const foundUser = users.find(u => u.email.trim().toLowerCase() === adminLoginEmail.trim().toLowerCase());
+    if (foundUser) {
+      if (foundUser.status === 'Aktif') {
+        setCurrentUser(foundUser);
+        setIsPublicMode(false);
+        setShowAdminLoginModal(false);
+        showToast(`Otentikasi Berhasil! Selamat datang, ${foundUser.nama} (${foundUser.role})`);
+      } else {
+        showToast('Akun Anda ditemukan, namun statusnya Nonaktif. Hubungi Super Admin.', 'error');
+      }
+    } else {
+      showToast('Akses Ditolak: Email tidak ditemukan dalam basis data pengurus DKM!', 'error');
+    }
+  };
+
   return (
-    <div id="app-container" className="min-h-screen bg-slate-50 text-slate-800">
+    <div id="app-container" className="min-h-screen bg-slate-50 text-slate-800 pb-24">
       
       {/* BRAND HEADER */}
       <header className="bg-emerald-800 text-white shadow-md border-b border-emerald-900">
@@ -309,24 +396,105 @@ export default function App() {
 
         {/* DYNAMIC VIEWS DEPENDING ON PUBLIC VS PORTAL */}
         {isPublicMode ? (
-          <PublicTransparansiView
-            kasMasuk={kasMasuk}
-            kasKeluar={kasKeluar}
-            onAddDonation={(amount, donorName, notes) => {
-              const id = 'M-' + Math.floor(1000 + Math.random() * 9000);
-              const item: KasMasuk = {
-                id,
-                tanggal: new Date().toISOString().slice(0, 10),
-                kategori: 'Infaq & Sedekah',
-                nominal: amount,
-                keterangan: `Donasi QRIS Mandiri - ${donorName || 'Hamba Allah'} (${notes || 'Sedekah Subuh'})`,
-                inputOleh: 'sistem.qris@masjid.org',
-                timestamp: new Date().toISOString(),
-              };
-              setKasMasuk(prev => [item, ...prev]);
-              showToast(`Alhamdulillah, donasi QRIS ${donorName ? `dari ${donorName}` : ''} senilai Rp ${amount.toLocaleString('id-ID')} berhasil masuk kas!`);
-            }}
-          />
+          <div className="space-y-6">
+            {/* Top Info Banner for Guest Mode */}
+            <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex items-start space-x-3 text-emerald-950 shadow-inner">
+              <span className="text-xl">📢</span>
+              <div className="space-y-1">
+                <h4 className="font-extrabold text-xs uppercase tracking-wider text-emerald-900">Mode Jemaah / Tamu (Read-Only)</h4>
+                <p className="text-xs leading-relaxed text-emerald-800">
+                  Anda sedang mengakses aplikasi sebagai <span className="font-bold">Tamu</span> dengan hak akses baca. Gunakan menu navigasi di bawah untuk beralih halaman.
+                </p>
+              </div>
+            </div>
+
+            {publicActiveTab === 'home' && (
+              <PublicTransparansiView
+                kasMasuk={kasMasuk}
+                kasKeluar={kasKeluar}
+                onAddDonation={(amount, donorName, notes) => {
+                  const id = 'M-' + Math.floor(1000 + Math.random() * 9000);
+                  const item: KasMasuk = {
+                    id,
+                    tanggal: new Date().toISOString().slice(0, 10),
+                    kategori: 'Infaq & Sedekah',
+                    nominal: amount,
+                    keterangan: `Donasi QRIS Mandiri - ${donorName || 'Hamba Allah'} (${notes || 'Sedekah Subuh'})`,
+                    inputOleh: 'sistem.qris@masjid.org',
+                    timestamp: new Date().toISOString(),
+                  };
+                  setKasMasuk(prev => [item, ...prev]);
+                  showToast(`Alhamdulillah, donasi QRIS ${donorName ? `dari ${donorName}` : ''} senilai Rp ${amount.toLocaleString('id-ID')} berhasil masuk kas!`);
+                }}
+              />
+            )}
+
+            {publicActiveTab === 'info' && (
+              <div className="space-y-4 animate-fade-in">
+                <LaporanBulananView
+                  kasMasuk={kasMasuk}
+                  kasKeluar={kasKeluar}
+                />
+              </div>
+            )}
+
+            {publicActiveTab === 'donation' && (
+              <div className="space-y-4 animate-fade-in">
+                <QrisSimulationView
+                  onAddDonation={(amount, donorName, notes) => {
+                    const id = 'M-' + Math.floor(1000 + Math.random() * 9000);
+                    const item: KasMasuk = {
+                      id,
+                      tanggal: new Date().toISOString().slice(0, 10),
+                      kategori: 'Infaq & Sedekah',
+                      nominal: amount,
+                      keterangan: `Donasi QRIS Mandiri - ${donorName || 'Hamba Allah'} (${notes || 'Sedekah Mandiri QRIS'})`,
+                      inputOleh: 'sistem.qris@masjid.org',
+                      timestamp: new Date().toISOString(),
+                    };
+                    setKasMasuk(prev => [item, ...prev]);
+                    showToast(`Alhamdulillah, donasi QRIS ${donorName ? `dari ${donorName}` : ''} senilai Rp ${amount.toLocaleString('id-ID')} berhasil masuk kas!`);
+                    setPublicActiveTab('home');
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        ) : currentUser.role === 'Jemaah' ? (
+          /* ACCESSIBILITY LOCK SCREEN ("Akses Terkunci") */
+          <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md mx-auto text-center border border-slate-200/80 my-12 animate-fade-in">
+            <div className="text-6xl mb-4 animate-bounce">🔒</div>
+            <h3 className="text-2xl font-black text-slate-900 tracking-tight">Akses Terkunci</h3>
+            <p className="text-slate-500 mt-3 text-xs leading-relaxed">
+              Akun Google Anda <span className="font-mono text-emerald-700 font-extrabold">{currentUser.email}</span> belum terdaftar di sistem pengurus KasMasjid.
+            </p>
+            <div className="mt-5 p-4 bg-amber-50 rounded-2xl text-left text-xs text-amber-900 border border-amber-200 leading-relaxed">
+              <strong className="text-amber-950 font-bold block mb-1">💡 Petunjuk Kemudahan Akses:</strong>
+              Silakan hubungi <b className="font-extrabold">Super Admin</b> untuk mendaftarkan email Google Anda, ATAU gunakan tombol di bawah untuk masuk sebagai <b className="font-extrabold text-emerald-800">Tamu (Read-Only)</b> untuk melihat laporan kas.
+            </div>
+            
+            <div className="mt-6 flex flex-col space-y-2.5">
+              <button
+                id="btn-lock-tamu"
+                onClick={() => {
+                  setIsPublicMode(true);
+                  setPublicActiveTab('home');
+                  showToast('Selamat Datang! Anda masuk sebagai Tamu (Akses Read-Only)');
+                }}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3 px-4 rounded-xl text-xs uppercase tracking-wider transition shadow cursor-pointer flex items-center justify-center space-x-2"
+              >
+                <span>🔓 Masuk sebagai Tamu (Read-Only)</span>
+              </button>
+
+              <button
+                id="btn-lock-admin"
+                onClick={handleTriggerAdminCheck}
+                className="bg-slate-800 hover:bg-slate-700 text-white font-extrabold py-3 px-4 rounded-xl text-xs uppercase tracking-wider transition shadow-sm cursor-pointer flex items-center justify-center space-x-2"
+              >
+                <span>🔄 Cek Otomatis &amp; Login Admin</span>
+              </button>
+            </div>
+          </div>
         ) : (
           <div className="grid grid-cols-1 gap-6">
             
@@ -366,6 +534,18 @@ export default function App() {
                 }`}
               >
                 📉 Kas Keluar
+              </button>
+
+              <button
+                id="tab-laporan"
+                onClick={() => setActiveTab('laporan')}
+                className={`py-2 px-4 border-b-2 font-bold text-xs uppercase tracking-wider transition ${
+                  activeTab === 'laporan'
+                    ? 'border-emerald-600 text-emerald-700'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                }`}
+              >
+                📋 Laporan Bulanan
               </button>
 
               <button
@@ -464,6 +644,13 @@ export default function App() {
                 />
               )}
 
+              {activeTab === 'laporan' && (
+                <LaporanBulananView
+                  kasMasuk={kasMasuk}
+                  kasKeluar={kasKeluar}
+                />
+              )}
+
               {activeTab === 'logistik' && (
                 <InventarisView
                   currentUser={currentUser}
@@ -526,29 +713,232 @@ export default function App() {
 
       </main>
 
+      {/* MOBILE BOTTOM NAVIGATION BAR */}
+      <div id="mobile-bottom-nav" className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] px-4 py-2.5 flex justify-around items-center">
+        <button
+          id="btn-nav-home"
+          onClick={handleNavHome}
+          className={`flex flex-col items-center space-y-1 transition duration-200 cursor-pointer ${
+            (isPublicMode && publicActiveTab === 'home') || (!isPublicMode && currentUser.role !== 'Jemaah' && activeTab === 'ringkasan')
+              ? 'text-emerald-700 font-extrabold scale-110'
+              : 'text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          <HomeIcon className="h-5 w-5" />
+          <span className="text-[10px] tracking-tight">Home</span>
+        </button>
+
+        <button
+          id="btn-nav-info"
+          onClick={handleNavInfo}
+          className={`flex flex-col items-center space-y-1 transition duration-200 cursor-pointer ${
+            (isPublicMode && publicActiveTab === 'info') || (!isPublicMode && currentUser.role !== 'Jemaah' && activeTab === 'laporan')
+              ? 'text-emerald-700 font-extrabold scale-110'
+              : 'text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          <BarChart3 className="h-5 w-5" />
+          <span className="text-[10px] tracking-tight">Info</span>
+        </button>
+
+        <button
+          id="btn-nav-donasi"
+          onClick={handleNavDonasi}
+          className={`flex flex-col items-center space-y-1 transition duration-200 cursor-pointer ${
+            (isPublicMode && publicActiveTab === 'donation') || (!isPublicMode && currentUser.role !== 'Jemaah' && activeTab === 'qris')
+              ? 'text-emerald-700 font-extrabold scale-110'
+              : 'text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          <QrCode className="h-5 w-5" />
+          <span className="text-[10px] tracking-tight font-medium">Donasi</span>
+        </button>
+
+        <button
+          id="btn-nav-menu"
+          onClick={() => setIsMenuOpen(true)}
+          className={`flex flex-col items-center space-y-1 transition duration-200 cursor-pointer ${
+            isMenuOpen ? 'text-emerald-700 font-extrabold scale-110' : 'text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          <MenuIcon className="h-5 w-5" />
+          <span className="text-[10px] tracking-tight">Menu</span>
+        </button>
+      </div>
+
+      {/* HAMBURGER BOTTOM SHEET OVERLAY */}
+      {isMenuOpen && (
+        <div id="nav-hamburger-modal" className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-4 transition-all duration-300 animate-fade-in">
+          <div className="bg-white rounded-t-3xl sm:rounded-2xl w-full max-w-md p-6 shadow-2xl border border-slate-100 space-y-4 max-h-[85vh] overflow-y-auto transform transition-all translate-y-0">
+            <div className="flex justify-between items-center border-b pb-3">
+              <div className="flex items-center space-x-2">
+                <span className="text-xl">🕌</span>
+                <h4 className="font-extrabold text-sm text-slate-800 uppercase tracking-wider">Akses Utama KasMasjid</h4>
+              </div>
+              <button onClick={() => setIsMenuOpen(false)} className="text-slate-400 hover:text-slate-600 font-extrabold text-lg p-1 cursor-pointer">×</button>
+            </div>
+
+            {/* Sesi Status */}
+            <div className="bg-slate-50 border border-slate-200/60 rounded-2xl p-4 space-y-2">
+              <span className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400 block">Sesi Aktif Saat Ini</span>
+              {isPublicMode ? (
+                <div className="flex items-center space-x-3">
+                  <div className="bg-emerald-100 text-emerald-800 p-2 rounded-xl text-lg font-bold">👤</div>
+                  <div>
+                    <h5 className="font-bold text-xs text-slate-800">Tamu / Jemaah Umum</h5>
+                    <p className="text-[10px] text-emerald-700 font-semibold leading-none mt-1">Akses: Read-Only (Terbuka)</p>
+                  </div>
+                </div>
+              ) : currentUser.role === 'Jemaah' ? (
+                <div className="flex items-center space-x-3">
+                  <div className="bg-amber-100 text-amber-800 p-2 rounded-xl text-lg font-bold">🔒</div>
+                  <div>
+                    <h5 className="font-bold text-xs text-slate-800">Akun Belum Terdaftar</h5>
+                    <p className="text-[10px] text-amber-700 font-semibold leading-none mt-1">Akses: Terkunci (Gembok)</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-3">
+                  <div className="bg-emerald-800 text-white p-2 rounded-xl text-lg font-bold">👑</div>
+                  <div>
+                    <h5 className="font-bold text-xs text-slate-800">{currentUser.nama}</h5>
+                    <p className="text-[10px] text-emerald-700 font-semibold leading-none mt-1">Peran: {currentUser.role} (Internal)</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Navigation Actions */}
+            <div className="space-y-2 pt-2">
+              <button
+                id="btn-menu-tamu"
+                onClick={() => {
+                  setIsPublicMode(true);
+                  setPublicActiveTab('home');
+                  setIsMenuOpen(false);
+                  showToast('Anda masuk sebagai Tamu (Akses Read-Only)');
+                }}
+                className="w-full text-left py-3 px-4 rounded-xl text-xs font-bold transition flex items-center justify-between border hover:bg-emerald-50/50 hover:border-emerald-200 bg-white border-slate-200 text-slate-700 cursor-pointer"
+              >
+                <span className="flex items-center space-x-2.5">
+                  <span className="text-sm">🔓</span>
+                  <span>Masuk sebagai Tamu (Read-Only)</span>
+                </span>
+                <span className="text-[10px] bg-slate-100 text-slate-500 font-bold px-2 py-0.5 rounded-full">Bebas Akses</span>
+              </button>
+
+              <button
+                id="btn-menu-admin-check"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  handleTriggerAdminCheck();
+                }}
+                className="w-full text-left py-3 px-4 rounded-xl text-xs font-bold transition flex items-center justify-between border hover:bg-emerald-50/50 hover:border-emerald-200 bg-white border-slate-200 text-slate-700 cursor-pointer"
+              >
+                <span className="flex items-center space-x-2.5">
+                  <span className="text-sm">🔄</span>
+                  <span>Login / Cek Akun Admin</span>
+                </span>
+                <span className="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded-full">Otomatis</span>
+              </button>
+
+              <a
+                id="btn-menu-konsultasi"
+                href="https://cdn.botpress.cloud/webchat/v3.6/shareable.html?configUrl=https://files.bpcontent.cloud/2025/09/25/07/20250925075110-TUJ9QG0T.json"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setIsMenuOpen(false)}
+                className="w-full text-left py-3 px-4 rounded-xl text-xs font-extrabold transition flex items-center justify-between border hover:bg-emerald-50 border-emerald-100 bg-emerald-50/50 text-emerald-800 hover:border-emerald-200 cursor-pointer"
+              >
+                <span className="flex items-center space-x-2.5">
+                  <span className="text-sm">💬</span>
+                  <span>Konsultasi e-Kas AI</span>
+                </span>
+                <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full animate-pulse">Bot AI</span>
+              </a>
+
+              {!isPublicMode && currentUser.role !== 'Jemaah' && (
+                <button
+                  id="btn-menu-logout"
+                  onClick={() => {
+                    const jemaahUser: User = {
+                      email: 'akun.lain@gmail.com',
+                      nama: 'Akun Google Lain',
+                      role: 'Jemaah',
+                      status: 'Aktif',
+                      tanggalDaftar: new Date().toISOString().slice(0, 10),
+                    };
+                    setCurrentUser(jemaahUser);
+                    setIsPublicMode(false);
+                    setIsMenuOpen(false);
+                    showToast('Sesi Admin keluar. Simulasi terkunci aktif.', 'error');
+                  }}
+                  className="w-full text-left py-3 px-4 rounded-xl text-xs font-bold transition flex items-center justify-between border hover:bg-rose-50 hover:border-rose-200 bg-white border-rose-100 text-rose-700 cursor-pointer"
+                >
+                  <span className="flex items-center space-x-2.5">
+                    <span className="text-sm">🚪</span>
+                    <span>Keluar Portal &amp; Kunci Sesi</span>
+                  </span>
+                  <span className="text-[10px] bg-rose-100 text-rose-700 font-bold px-2 py-0.5 rounded-full">Simulasi Lock</span>
+                </button>
+              )}
+            </div>
+
+            <div className="pt-2 text-[10px] text-slate-400 text-center leading-relaxed">
+              Tekan <b className="text-slate-600">Simulasi Lock</b> untuk menguji tampilan ketika akun terkunci gembok di smartphone jemaah.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ADMIN CHECK MODAL */}
+      {showAdminLoginModal && (
+        <div id="admin-check-modal" className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl border border-slate-100 space-y-4">
+            <div className="flex justify-between items-center border-b pb-3">
+              <h4 className="font-extrabold text-sm text-slate-800 uppercase tracking-wider">Verifikasi Keanggotaan DKM</h4>
+              <button onClick={() => setShowAdminLoginModal(false)} className="text-slate-400 hover:text-slate-600 font-extrabold text-lg p-1 cursor-pointer">×</button>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Fitur ini memicu pemeriksaan otomatis apakah email Google Anda telah terdaftar di database pengurus KasMasjid di Google Spreadsheet.
+              </p>
+
+              <div>
+                <label className="block text-[11px] font-extrabold text-slate-600 uppercase tracking-wider mb-1">Email Google Sesi Aktif</label>
+                <input
+                  type="email"
+                  value={adminLoginEmail}
+                  onChange={(e) => setAdminLoginEmail(e.target.value)}
+                  placeholder="bukukassekolah@gmail.com"
+                  className="w-full text-xs font-mono font-bold p-3 border border-slate-200 bg-slate-50 rounded-xl focus:ring-1 focus:ring-emerald-600 focus:outline-none"
+                />
+                <span className="text-[10px] text-slate-400 mt-1 block">
+                  Gunakan <span className="font-bold text-emerald-700">bukukassekolah@gmail.com</span> atau email pengurus lainnya untuk simulasi login instan.
+                </span>
+              </div>
+
+              <button
+                id="btn-verify-database"
+                onClick={handleVerifyAdminEmail}
+                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition shadow cursor-pointer flex items-center justify-center space-x-2"
+              >
+                <span>🔍 Cari di Basis Data &amp; Autologin</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* FOOTER */}
       <footer className="mt-16 bg-slate-900 text-slate-500 py-8 border-t border-slate-800 text-center text-xs animate-fade-in">
         <div className="max-w-7xl mx-auto px-4 space-y-2">
-          <p className="font-extrabold text-slate-400">🕌 KasMasjid v1.0 — Bagian dari Ekosistem e-Kas / KulinaSystem</p>
+          <p className="font-extrabold text-slate-400">🕌 <a href="https://landing.kasmasjid.web.id/" target="_blank" rel="noopener noreferrer" className="text-emerald-500 hover:underline">KasMasjid</a> v1.0 — Bagian dari Ekosistem <a href="https://landing.e-kas.web.id" target="_blank" rel="noopener noreferrer" className="text-emerald-500 hover:underline">e-Kas</a></p>
           <p>Didesain secara khusus untuk Dewan Kemakmuran Masjid (DKM). Transparansi Keuangan Berbasis Syariah.</p>
           <p className="text-[10px] text-slate-600">© 2026 KasMasjid. Seluruh hak cipta dilindungi undang-undang.</p>
         </div>
       </footer>
-
-      {/* FLOATING STICKY KONSULTASI BUTTON */}
-      <a
-        href="https://cdn.botpress.cloud/webchat/v3.6/shareable.html?configUrl=https://files.bpcontent.cloud/2025/09/25/07/20250925075110-TUJ9QG0T.json"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="fixed bottom-6 right-6 z-50 flex items-center space-x-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs sm:text-sm px-4 py-3 sm:px-5 sm:py-3.5 rounded-full shadow-2xl hover:shadow-[0_10px_30px_rgba(16,185,129,0.3)] transition-all duration-300 hover:scale-105 active:scale-95 group border border-emerald-400/20"
-        id="btn-sticky-konsultasi"
-      >
-        <span className="flex h-3 w-3 relative">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500 animate-pulse"></span>
-        </span>
-        <span className="tracking-wide uppercase font-black">💬 Konsultasi e-Kas</span>
-      </a>
 
     </div>
   );

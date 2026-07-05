@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { KasMasuk, KasKeluar, InventarisLogistik, RapatPengajuan } from '../types';
+import { Heart, TrendingUp, Users, ArrowUpRight, DollarSign } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -45,17 +46,18 @@ export default function DashboardView({
   const pendingProposals = proposals.filter((p) => p.status === 'Diajukan').length;
 
   // Monthly data preparation
-  const monthlyMap: { [key: string]: { masuk: number; keluar: number } } = {};
+  const monthlyMap: { [key: string]: { masuk: number; keluar: number; masukCount: number } } = {};
   
   kasMasuk.forEach((item) => {
     const month = item.tanggal.substring(0, 7); // YYYY-MM
-    if (!monthlyMap[month]) monthlyMap[month] = { masuk: 0, keluar: 0 };
+    if (!monthlyMap[month]) monthlyMap[month] = { masuk: 0, keluar: 0, masukCount: 0 };
     monthlyMap[month].masuk += item.nominal;
+    monthlyMap[month].masukCount += 1;
   });
 
   kasKeluar.forEach((item) => {
     const month = item.tanggal.substring(0, 7); // YYYY-MM
-    if (!monthlyMap[month]) monthlyMap[month] = { masuk: 0, keluar: 0 };
+    if (!monthlyMap[month]) monthlyMap[month] = { masuk: 0, keluar: 0, masukCount: 0 };
     monthlyMap[month].keluar += item.nominal;
   });
 
@@ -69,6 +71,7 @@ export default function DashboardView({
       const label = date.toLocaleDateString('id-ID', { month: 'short', year: 'numeric' });
       const masuk = monthlyMap[month].masuk;
       const keluar = monthlyMap[month].keluar;
+      const masukCount = monthlyMap[month].masukCount || 0;
       const net = masuk - keluar;
       cumulativeBalance += net;
 
@@ -78,6 +81,8 @@ export default function DashboardView({
         'Kas Keluar': keluar,
         'Surplus Bersih': net,
         'Saldo Akumulatif': cumulativeBalance,
+        'Jumlah Transaksi': masukCount,
+        'Rerata Donasi': masukCount > 0 ? Math.round(masuk / masukCount) : 0,
       };
     });
 
@@ -106,6 +111,10 @@ export default function DashboardView({
     name: cat,
     value: keluarCatMap[cat],
   }));
+
+  const totalDonaturCount = kasMasuk.length;
+  const maxDonation = kasMasuk.length > 0 ? Math.max(...kasMasuk.map(item => item.nominal)) : 0;
+  const avgDonation = totalDonaturCount > 0 ? totalMasuk / totalDonaturCount : 0;
 
   const formatRupiah = (val: number) => {
     return 'Rp ' + val.toLocaleString('id-ID');
@@ -252,6 +261,152 @@ export default function DashboardView({
 
           <div className="mt-4 pt-3.5 border-t border-slate-100 text-[10px] text-slate-400 leading-relaxed">
             💡 <span className="font-semibold text-slate-600">Saran Keuangan:</span> {savingsRate > 50 ? 'Surplus sangat tinggi. Pengurus disarankan mempercepat penyaluran program sosial & dhuafa.' : 'Rasio simpanan ideal. Stabilitas keuangan masjid sangat sehat & terkontrol.'}
+          </div>
+        </div>
+      </div>
+
+      {/* SECTION TREN PENERIMAAN DONASI (DONATION TRENDS) */}
+      <div id="donation-trends-section" className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 space-y-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 pb-4">
+          <div>
+            <div className="flex items-center space-x-2">
+              <span className="p-1.5 bg-emerald-50 rounded-lg text-emerald-600">
+                <Heart className="w-5 h-5 fill-emerald-100" />
+              </span>
+              <h4 className="font-extrabold text-slate-900 text-sm uppercase tracking-wider">Tren Penerimaan Donasi (Donation Trends)</h4>
+            </div>
+            <p className="text-xs text-slate-400 mt-1">Analisis intensitas donasi masuk, frekuensi transaksi, dan rerata kontribusi jemaah bulanan</p>
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-[10px] bg-emerald-50 text-emerald-700 font-extrabold px-2.5 py-1 rounded-full flex items-center gap-1 uppercase tracking-wider">
+              <TrendingUp className="w-3.5 h-3.5" /> Terpantau Stabil
+            </span>
+          </div>
+        </div>
+
+        {/* Donation KPI Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="p-4 bg-slate-50/70 border border-slate-100 rounded-2xl flex items-center space-x-3.5">
+            <div className="p-2.5 bg-emerald-100/60 rounded-xl text-emerald-700">
+              <DollarSign className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Donasi</span>
+              <span className="text-sm font-black text-slate-800 block mt-0.5">{formatRupiah(totalMasuk)}</span>
+            </div>
+          </div>
+
+          <div className="p-4 bg-slate-50/70 border border-slate-100 rounded-2xl flex items-center space-x-3.5">
+            <div className="p-2.5 bg-blue-100/60 rounded-xl text-blue-700">
+              <Users className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Frekuensi Donasi</span>
+              <span className="text-sm font-black text-slate-800 block mt-0.5">{totalDonaturCount} Transaksi</span>
+            </div>
+          </div>
+
+          <div className="p-4 bg-slate-50/70 border border-slate-100 rounded-2xl flex items-center space-x-3.5">
+            <div className="p-2.5 bg-purple-100/60 rounded-xl text-purple-700">
+              <TrendingUp className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Rerata Per Donasi</span>
+              <span className="text-sm font-black text-slate-800 block mt-0.5">{formatRupiah(Math.round(avgDonation))}</span>
+            </div>
+          </div>
+
+          <div className="p-4 bg-slate-50/70 border border-slate-100 rounded-2xl flex items-center space-x-3.5">
+            <div className="p-2.5 bg-amber-100/60 rounded-xl text-amber-700">
+              <ArrowUpRight className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Donasi Terbesar</span>
+              <span className="text-sm font-black text-slate-800 block mt-0.5">{formatRupiah(maxDonation)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Donation Trends Chart Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Dual-axis Chart */}
+          <div className="lg:col-span-2 border border-slate-100 rounded-2xl p-4 bg-slate-50/30">
+            <div className="flex justify-between items-center mb-4">
+              <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider block">Grafik Tren Volume vs Frekuensi Bulanan</span>
+              <div className="flex items-center space-x-3 text-[10px] font-bold">
+                <span className="flex items-center space-x-1.5">
+                  <span className="h-2 w-2 rounded-full bg-emerald-600"></span>
+                  <span className="text-slate-500">Nominal Donasi (Rp)</span>
+                </span>
+                <span className="flex items-center space-x-1.5">
+                  <span className="h-2 w-2 rounded-full bg-blue-500"></span>
+                  <span className="text-slate-500">Jumlah Transaksi</span>
+                </span>
+              </div>
+            </div>
+            
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={monthlyData} margin={{ top: 10, right: 5, left: -10, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorDonasiInflow" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#059669" stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor="#059669" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorFreqInflow" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="month" stroke="#94a3b8" fontSize={10} tickLine={false} />
+                  
+                  {/* Left Y-axis for Nominal */}
+                  <YAxis yAxisId="left" stroke="#059669" fontSize={10} tickLine={false} tickFormatter={(val) => `Rp ${val / 1000000}M`} />
+                  
+                  {/* Right Y-axis for Frequency */}
+                  <YAxis yAxisId="right" orientation="right" stroke="#3b82f6" fontSize={10} tickLine={false} tickFormatter={(val) => `${val}x`} />
+                  
+                  <Tooltip
+                    formatter={(value: any, name: any) => {
+                      if (name === 'Kas Masuk') return [formatRupiah(Number(value)), 'Total Donasi'];
+                      if (name === 'Jumlah Transaksi') return [`${value} Transaksi`, name];
+                      return [value, name];
+                    }}
+                    contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #f1f5f9' }}
+                  />
+                  
+                  <Area yAxisId="left" type="monotone" dataKey="Kas Masuk" stroke="#059669" strokeWidth={2.5} fillOpacity={1} fill="url(#colorDonasiInflow)" />
+                  <Area yAxisId="right" type="monotone" dataKey="Jumlah Transaksi" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorFreqInflow)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Monthly Averages List & Analysis */}
+          <div className="border border-slate-100 rounded-2xl p-4 bg-slate-50/30 flex flex-col justify-between">
+            <div>
+              <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider block mb-3">Histori Donasi Rata-rata</span>
+              <div className="space-y-2.5 max-h-48 overflow-y-auto">
+                {monthlyData.map((item) => (
+                  <div key={item.month} className="flex justify-between items-center py-2 border-b border-slate-100/50 text-xs">
+                    <div>
+                      <span className="font-bold text-slate-700 block">{item.month}</span>
+                      <span className="text-[10px] text-slate-400 font-medium">{item['Jumlah Transaksi']} kali donasi masuk</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-extrabold text-slate-800 block">{formatRupiah(item['Rerata Donasi'] || 0)}</span>
+                      <span className="text-[9px] text-slate-400">Rata-rata/kontribusi</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-3 pt-3 border-t border-slate-100 text-[10px] text-slate-400 leading-relaxed bg-white p-2.5 rounded-xl border">
+              📈 <span className="font-bold text-slate-600">Info Tren:</span> Kontribusi jemaah tertinggi tercatat pada bulan dengan frekuensi donatur aktif terbanyak. Pertahankan strategi transparansi untuk meningkatkan keterikatan donatur.
+            </div>
           </div>
         </div>
       </div>

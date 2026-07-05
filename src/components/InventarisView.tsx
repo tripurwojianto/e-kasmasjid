@@ -23,7 +23,7 @@ export default function InventarisView({
   const [tanggal, setTanggal] = useState(new Date().toISOString().split('T')[0]);
   const [namaBarang, setNamaBarang] = useState('');
   const [jenisLogistik, setJenisLogistik] = useState<'Masuk' | 'Keluar'>('Masuk');
-  const [kategori, setKategori] = useState('');
+  const [kategori, setKategori] = useState('Bahan Bangunan');
   const [volume, setVolume] = useState('');
   const [satuan, setSatuan] = useState('');
   const [sumberPeruntukan, setSumberPeruntukan] = useState('');
@@ -40,14 +40,19 @@ export default function InventarisView({
     e.preventDefault();
     if (!canWrite) return;
 
+    let finalSumberPeruntukan = sumberPeruntukan.trim();
+    if (!finalSumberPeruntukan) {
+      finalSumberPeruntukan = jenisLogistik === 'Masuk' ? 'Hamba Allah' : 'Renovasi / Kebutuhan Masjid';
+    }
+
     onAdd({
       tanggal,
       namaBarang,
       jenisLogistik,
-      kategori: kategori || 'Perlengkapan',
+      kategori: kategori || 'Bahan Bangunan',
       volume: parseFloat(volume),
       satuan: satuan || 'Unit',
-      sumberPeruntukan,
+      sumberPeruntukan: finalSumberPeruntukan,
       keterangan,
     });
 
@@ -57,6 +62,7 @@ export default function InventarisView({
     setSatuan('');
     setSumberPeruntukan('');
     setKeterangan('');
+    setKategori('Bahan Bangunan');
     setShowForm(false);
   };
 
@@ -170,23 +176,32 @@ export default function InventarisView({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label htmlFor="input-inv-kategori" className="block text-xs font-bold text-slate-400 uppercase">Kategori Barang</label>
-              <input
+              <select
                 id="input-inv-kategori"
-                type="text"
-                placeholder="Contoh: Kitab Suci, Elektronik, Sarpras"
                 value={kategori}
                 onChange={(e) => setKategori(e.target.value)}
                 className="mt-1 w-full text-xs font-semibold p-3 border border-slate-100 bg-slate-50/50 rounded-xl focus:ring-1 focus:ring-emerald-600 focus:outline-none"
-              />
+              >
+                <option value="Bahan Bangunan">Bahan Bangunan (Semen, Cat, Keramik)</option>
+                <option value="Perkakas">Perkakas (Bor, Gergaji, Obeng)</option>
+                <option value="Perabot">Perabot (Meja, Lemari, Karpet)</option>
+                <option value="Elektrik">Elektrik (Kabel, Saklar, Lampu)</option>
+                <option value="Elektronik">Elektronik (AC, Sound System, TV)</option>
+              </select>
             </div>
 
             <div>
-              <label htmlFor="input-inv-sumber" className="block text-xs font-bold text-slate-400 uppercase">Sumber / Peruntukan</label>
+              <label htmlFor="input-inv-sumber" className="block text-xs font-bold text-slate-400 uppercase">
+                {jenisLogistik === 'Masuk' ? 'Nama Donatur / Sumber Barang' : 'Peruntukan Pengeluaran'}
+              </label>
               <input
                 id="input-inv-sumber"
                 type="text"
-                required
-                placeholder="Contoh: Wakaf H. Ramli / Dibagikan gratis"
+                placeholder={
+                  jenisLogistik === 'Masuk'
+                    ? 'Hamba Allah (jika dikosongkan) / Contoh: Wakaf H. Ramli'
+                    : 'Contoh: Renovasi tempat wudhu / Dibagikan gratis'
+                }
                 value={sumberPeruntukan}
                 onChange={(e) => setSumberPeruntukan(e.target.value)}
                 className="mt-1 w-full text-xs font-semibold p-3 border border-slate-100 bg-slate-50/50 rounded-xl focus:ring-1 focus:ring-emerald-600 focus:outline-none"

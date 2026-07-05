@@ -27,6 +27,16 @@ export default function KasKeluarView({
   const [keterangan, setKeterangan] = useState('');
   const [nominal, setNominal] = useState('');
   const [buktiUrl, setBuktiUrl] = useState('');
+  const [sendWa, setSendWa] = useState(false);
+  const [waTarget, setWaTarget] = useState('ketua');
+  const [customPhone, setCustomPhone] = useState('');
+  const [isSuggested, setIsSuggested] = useState(false);
+
+  const PENGURUS_WA = [
+    { key: 'ketua', nama: 'Ustadz Drs. H. Ahmad Fauzi (Ketua DKM)', phone: '6281234567890' },
+    { key: 'sekretaris', nama: 'H. Syarifudin (Secerataris)', phone: '6281398765432' },
+    { key: 'bendahara', nama: 'Ir. H. Bambang Susilo (Bendahara Umum)', phone: '6281122334455' },
+  ];
 
   // Filtering
   const [searchTerm, setSearchTerm] = useState('');
@@ -36,6 +46,38 @@ export default function KasKeluarView({
   const canDelete = currentUser.role === 'Super Admin';
 
   const keluarCategories = categories.filter((c) => c.jenis === 'Keluar');
+
+  const handleKeteranganChange = (val: string) => {
+    setKeterangan(val);
+    const text = val.toLowerCase();
+
+    // Map keywords to expected category names
+    const rules = [
+      { keywords: ['imam', 'muadzin', 'bilal', 'bisyarah'], category: 'Honor Imam' },
+      { keywords: ['penceramah', 'ustadz', 'ustad', 'kyai', 'khotib', 'khutbah', 'kajian', 'pengajian', 'pembicara'], category: 'Honor Penceramah' },
+      { keywords: ['marbot', 'bersih-bersih', 'petugas kebersihan'], category: 'Honor Marbot' },
+      { keywords: ['konsumsi', 'makanan', 'minuman', 'snack', 'takjil', 'berbuka', 'kopi', 'teh', 'nasi', 'buah'], category: 'Konsumsi' },
+      { keywords: ['listrik', 'pln', 'token', 'tagihan listrik', 'pulsa listrik'], category: 'Listrik' },
+      { keywords: ['perawatan', 'renovasi', 'perbaikan', 'cat', 'semen', 'pipa', 'kran', 'ac', 'sound', 'speaker', 'lampu', 'bohlam', 'kabel', 'sapu', 'pel', 'sabun', 'pompa'], category: 'Perawatan' },
+    ];
+
+    let matched = false;
+    for (const rule of rules) {
+      if (rule.keywords.some(kw => text.includes(kw))) {
+        const exists = keluarCategories.some(c => c.namaKategori === rule.category);
+        if (exists) {
+          setKategori(rule.category);
+          setIsSuggested(true);
+          matched = true;
+          break;
+        }
+      }
+    }
+
+    if (!matched) {
+      setIsSuggested(false);
+    }
+  };
 
   // Set default category if not set
   React.useEffect(() => {
@@ -50,16 +92,50 @@ export default function KasKeluarView({
 
     onAdd({
       tanggal,
-      kategori: kategori || (keluarCategories[0]?.namaKategori || 'Peralatan Ibadah'),
+      kategori: kategori || (keluarCategories[0]?.namaKategori || 'Perawatan'),
       keterangan,
       nominal: parseFloat(nominal),
       buktiUrl,
     });
 
+    // Handle WhatsApp Sending via Third-Party Link API
+    if (sendWa) {
+      let targetPhone = '';
+      if (waTarget === 'custom') {
+        targetPhone = customPhone;
+      } else {
+        const selected = PENGURUS_WA.find(p => p.key === waTarget);
+        targetPhone = selected ? selected.phone : '';
+      }
+
+      if (targetPhone) {
+        const formattedNominal = parseFloat(nominal).toLocaleString('id-ID');
+        const message = `*🕌 NOTIFIKASI TRANSAKSI KAS MASJID 🕌*
+_Masjid Agung KasMasjid_
+
+*Tipe Transaksi:* KAS KELUAR (Penyaluran) ⚠️
+*Tanggal:* ${tanggal}
+*Kategori:* ${kategori || (keluarCategories[0]?.namaKategori || 'Perawatan')}
+*Nominal:* Rp ${formattedNominal}
+*Keterangan:* ${keterangan}
+*Petugas:* ${currentUser.nama} (${currentUser.role})
+*Status:* Berhasil Dicatat di Sistem
+
+----------------------------------------
+_Laporan transparansi dikirim otomatis melalui sistem manajemen keuangan KasMasjid (e-Kas)._`;
+
+        const waUrl = `https://api.whatsapp.com/send?phone=${targetPhone}&text=${encodeURIComponent(message)}`;
+        window.open(waUrl, '_blank');
+      }
+    }
+
     // Reset Form
     setKeterangan('');
     setNominal('');
     setBuktiUrl('');
+    setSendWa(false);
+    setCustomPhone('');
+    setIsSuggested(false);
     setShowForm(false);
   };
 
@@ -122,7 +198,10 @@ export default function KasKeluarView({
               <select
                 id="input-keluar-kategori"
                 value={kategori}
-                onChange={(e) => setKategori(e.target.value)}
+                onChange={(e) => {
+                  setKategori(e.target.value);
+                  setIsSuggested(false);
+                }}
                 className="mt-1 w-full text-xs font-semibold p-3 border border-slate-100 bg-slate-50/50 rounded-xl focus:ring-1 focus:ring-emerald-600 focus:outline-none"
               >
                 {keluarCategories.map((cat) => (
@@ -131,6 +210,11 @@ export default function KasKeluarView({
                   </option>
                 ))}
               </select>
+              {isSuggested && (
+                <span className="text-[10px] text-emerald-600 font-extrabold flex items-center gap-1 mt-1.5 animate-pulse">
+                  ✨ Kategori disarankan otomatis
+                </span>
+              )}
             </div>
           </div>
 
@@ -170,9 +254,60 @@ export default function KasKeluarView({
               required
               placeholder="Contoh: Pembelian sabun pel, pembersih marbot..."
               value={keterangan}
-              onChange={(e) => setKeterangan(e.target.value)}
+              onChange={(e) => handleKeteranganChange(e.target.value)}
               className="mt-1 w-full text-xs font-semibold p-3 border border-slate-100 bg-slate-50/50 rounded-xl focus:ring-1 focus:ring-emerald-600 focus:outline-none"
             />
+          </div>
+
+          {/* WhatsApp Notification Integration */}
+          <div className="bg-emerald-50/50 border border-emerald-100/80 rounded-2xl p-4 space-y-3.5 mt-2">
+            <div className="flex items-center space-x-2.5">
+              <input
+                id="chk-send-wa"
+                type="checkbox"
+                checked={sendWa}
+                onChange={(e) => setSendWa(e.target.checked)}
+                className="h-4 w-4 text-emerald-600 border-slate-200 rounded focus:ring-emerald-500 cursor-pointer"
+              />
+              <label htmlFor="chk-send-wa" className="text-xs font-extrabold text-emerald-950 uppercase tracking-wider cursor-pointer flex items-center gap-1.5 select-none">
+                <span>💬 Kirim Ringkasan ke WhatsApp Pengurus</span>
+                <span className="text-[9px] bg-emerald-100 text-emerald-800 font-black px-1.5 py-0.5 rounded-full uppercase tracking-normal">Integrasi API</span>
+              </label>
+            </div>
+
+            {sendWa && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1 animate-fade-in">
+                <div>
+                  <label htmlFor="wa-target-select" className="block text-[10px] font-bold text-slate-400 uppercase">Pilih Pengurus Penerima</label>
+                  <select
+                    id="wa-target-select"
+                    value={waTarget}
+                    onChange={(e) => setWaTarget(e.target.value)}
+                    className="mt-1.5 w-full text-xs font-semibold p-3 border border-slate-200 bg-white rounded-xl focus:ring-1 focus:ring-emerald-600 focus:outline-none cursor-pointer"
+                  >
+                    {PENGURUS_WA.map((p) => (
+                      <option key={p.key} value={p.key}>{p.nama}</option>
+                    ))}
+                    <option value="custom">✍️ Input No. WhatsApp Manual</option>
+                  </select>
+                </div>
+
+                {waTarget === 'custom' && (
+                  <div>
+                    <label htmlFor="wa-custom-phone" className="block text-[10px] font-bold text-slate-400 uppercase">No. WhatsApp Penerima (Contoh: 628123xxx)</label>
+                    <input
+                      id="wa-custom-phone"
+                      type="text"
+                      required={waTarget === 'custom'}
+                      placeholder="Masukkan No. WA, contoh: 628123456789"
+                      value={customPhone}
+                      onChange={(e) => setCustomPhone(e.target.value.replace(/[^0-9]/g, ''))}
+                      className="mt-1.5 w-full text-xs font-semibold p-3 border border-slate-200 bg-white rounded-xl focus:ring-1 focus:ring-emerald-600 focus:outline-none"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end space-x-2 pt-2">

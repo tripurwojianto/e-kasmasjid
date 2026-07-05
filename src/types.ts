@@ -20,6 +20,7 @@ export interface KasMasuk {
   keterangan: string;
   nominal: number;
   buktiUrl?: string;
+  donatur?: string;
   inputOleh: string;
   timestamp: string;
 }

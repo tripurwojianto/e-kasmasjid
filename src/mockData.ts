@@ -61,7 +61,7 @@ export const initialKasMasuk: KasMasuk[] = [
   {
     id: 'M-001',
     tanggal: '2026-06-15',
-    kategori: 'Infak Jumat',
+    kategori: 'Infaq Jumat',
     keterangan: 'Infak kotak amal salat Jumat perdana Juni',
     nominal: 4500000,
     buktiUrl: 'https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?w=400&auto=format&fit=crop&q=60',
@@ -81,8 +81,8 @@ export const initialKasMasuk: KasMasuk[] = [
   {
     id: 'M-003',
     tanggal: '2026-06-20',
-    kategori: 'Donasi Khusus',
-    keterangan: 'Donasi hamba Allah untuk santunan anak yatim & dhuafa',
+    kategori: 'Infaq Terikat',
+    keterangan: 'Donasi hamba Allah untuk pembangunan menara masjid',
     nominal: 5000000,
     buktiUrl: '',
     inputOleh: 'bendahara1@masjid.org',
@@ -91,7 +91,7 @@ export const initialKasMasuk: KasMasuk[] = [
   {
     id: 'M-004',
     tanggal: '2026-06-25',
-    kategori: 'Infak Jumat',
+    kategori: 'Infaq Jumat',
     keterangan: 'Infak kotak amal Jumat kedua Juni',
     nominal: 3850000,
     buktiUrl: '',
@@ -101,8 +101,8 @@ export const initialKasMasuk: KasMasuk[] = [
   {
     id: 'M-005',
     tanggal: '2026-06-28',
-    kategori: 'Sponsor / CSR',
-    keterangan: 'Bantuan dana sosial perusahaan dari PT Sejahtera Mulia',
+    kategori: 'Infaq Terikat',
+    keterangan: 'Bantuan dari Yayasan Madani Indonesia',
     nominal: 10000000,
     buktiUrl: '',
     inputOleh: 'bendahara1@masjid.org',
@@ -114,7 +114,7 @@ export const initialKasKeluar: KasKeluar[] = [
   {
     id: 'K-001',
     tanggal: '2026-06-16',
-    kategori: 'Kebersihan & Sarpras',
+    kategori: 'Perawatan',
     keterangan: 'Pembelian sabun pel, sapu, pembersih kaca, dan pengharum ruangan',
     nominal: 350000,
     buktiUrl: 'https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?w=400&auto=format&fit=crop&q=60',
@@ -124,9 +124,9 @@ export const initialKasKeluar: KasKeluar[] = [
   {
     id: 'K-002',
     tanggal: '2026-06-19',
-    kategori: 'Penyaluran Zakat & Bansos',
-    keterangan: 'Penyaluran zakat fitrah & sembako untuk 30 jiwa fakir miskin di RT 03',
-    nominal: 3000000,
+    kategori: 'Konsumsi',
+    keterangan: 'Konsumsi rapat koordinasi DKM mingguan',
+    nominal: 300000,
     buktiUrl: '',
     inputOleh: 'bendahara2@masjid.org',
     timestamp: '2026-06-19T09:00:00Z',
@@ -134,9 +134,9 @@ export const initialKasKeluar: KasKeluar[] = [
   {
     id: 'K-003',
     tanggal: '2026-06-22',
-    kategori: 'Insentif Marbot & Imam',
-    keterangan: 'Pemberian mukafah bulanan untuk imam, muazin, dan marbot',
-    nominal: 4500000,
+    kategori: 'Honor Imam',
+    keterangan: 'Mukafah bulanan untuk imam rawatib utama',
+    nominal: 3000000,
     buktiUrl: '',
     inputOleh: 'bendahara2@masjid.org',
     timestamp: '2026-06-22T17:00:00Z',
@@ -144,8 +144,8 @@ export const initialKasKeluar: KasKeluar[] = [
   {
     id: 'K-004',
     tanggal: '2026-06-26',
-    kategori: 'Sosial & Santunan',
-    keterangan: 'Santunan dhuafa warga RW 05 yang sedang sakit keras (Ibu Aminah)',
+    kategori: 'Konsumsi',
+    keterangan: 'Konsumsi pengajian bulanan jemaah ibu-ibu',
     nominal: 1000000,
     buktiUrl: '',
     inputOleh: 'superadmin@masjid.org',
@@ -154,8 +154,8 @@ export const initialKasKeluar: KasKeluar[] = [
   {
     id: 'K-005',
     tanggal: '2026-06-29',
-    kategori: 'Listrik & Air',
-    keterangan: 'Pembayaran tagihan listrik token utama dan air PDAM',
+    kategori: 'Listrik',
+    keterangan: 'Pembayaran tagihan listrik token utama masjid',
     nominal: 1850000,
     buktiUrl: '',
     inputOleh: 'bendahara2@masjid.org',
@@ -253,15 +253,20 @@ export const initialRapatPengajuan: RapatPengajuan[] = [
 ];
 
 export const initialKategori: Kategori[] = [
-  { namaKategori: 'Infak Jumat', jenis: 'Masuk' },
-  { namaKategori: 'Donasi Khusus', jenis: 'Masuk' },
+  // Pemasukan: baris 1-8
+  { namaKategori: 'Infaq Jumat', jenis: 'Masuk' },
+  { namaKategori: 'Infaq Umum', jenis: 'Masuk' },
+  { namaKategori: 'Infaq Terikat', jenis: 'Masuk' },
+  { namaKategori: 'Donasi QRIS', jenis: 'Masuk' },
+  { namaKategori: 'Kotak Amal', jenis: 'Masuk' },
   { namaKategori: 'Zakat Fitrah', jenis: 'Masuk' },
-  { namaKategori: 'Sponsor / CSR', jenis: 'Masuk' },
-  { namaKategori: 'Kotak Amal Harian', jenis: 'Masuk' },
-  { namaKategori: 'Peralatan Ibadah', jenis: 'Keluar' },
-  { namaKategori: 'Kebersihan & Sarpras', jenis: 'Keluar' },
-  { namaKategori: 'Penyaluran Zakat & Bansos', jenis: 'Keluar' },
-  { namaKategori: 'Insentif Marbot & Imam', jenis: 'Keluar' },
-  { namaKategori: 'Sosial & Santunan', jenis: 'Keluar' },
-  { namaKategori: 'Listrik & Air', jenis: 'Keluar' },
+  { namaKategori: 'Zakat Mal', jenis: 'Masuk' },
+  
+  // Pengeluaran: baris 9-14
+  { namaKategori: 'Honor Imam', jenis: 'Keluar' },
+  { namaKategori: 'Honor Penceramah', jenis: 'Keluar' },
+  { namaKategori: 'Honor Marbot', jenis: 'Keluar' },
+  { namaKategori: 'Konsumsi', jenis: 'Keluar' },
+  { namaKategori: 'Listrik', jenis: 'Keluar' },
+  { namaKategori: 'Perawatan', jenis: 'Keluar' },
 ];
