@@ -7,13 +7,8 @@ import { User, KasMasuk, KasKeluar, InventarisLogistik, RapatPengajuan, Kategori
 
 export const initialUsers: User[] = [
   {
-<<<<<<< HEAD
     email: 'bukukassekolah@gmail.com',
     nama: 'Owner (bukukassekolah@gmail.com)',
-=======
-    email: 'tripurwojianto7@gmail.com',
-    nama: 'Developer',
->>>>>>> 5c0a7516461135a0c0f8f8c3448d54a199890e9a
     role: 'Super Admin',
     status: 'Aktif',
     tanggalDaftar: '2026-07-04',

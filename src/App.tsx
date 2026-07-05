@@ -22,6 +22,7 @@ import ProposalsView from './components/ProposalsView';
 import PublicTransparansiView from './components/PublicTransparansiView';
 import UserManagementView from './components/UserManagementView';
 import ExportCenterView from './components/ExportCenterView';
+import QrisSimulationView from './components/QrisSimulationView';
 
 export default function App() {
   // Load data from localStorage or fallback to mockData
@@ -82,7 +83,7 @@ export default function App() {
   const [isPublicMode, setIsPublicMode] = useState(false);
 
   // Active Tab for Admin Portal
-  const [activeTab, setActiveTab] = useState<'ringkasan' | 'masuk' | 'keluar' | 'logistik' | 'rapat' | 'users' | 'export'>('ringkasan');
+  const [activeTab, setActiveTab] = useState<'ringkasan' | 'masuk' | 'keluar' | 'logistik' | 'rapat' | 'users' | 'export' | 'qris'>('ringkasan');
 
   // Toaster notifications
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
@@ -311,12 +312,26 @@ export default function App() {
           <PublicTransparansiView
             kasMasuk={kasMasuk}
             kasKeluar={kasKeluar}
+            onAddDonation={(amount, donorName, notes) => {
+              const id = 'M-' + Math.floor(1000 + Math.random() * 9000);
+              const item: KasMasuk = {
+                id,
+                tanggal: new Date().toISOString().slice(0, 10),
+                kategori: 'Infaq & Sedekah',
+                nominal: amount,
+                keterangan: `Donasi QRIS Mandiri - ${donorName || 'Hamba Allah'} (${notes || 'Sedekah Subuh'})`,
+                inputOleh: 'sistem.qris@masjid.org',
+                timestamp: new Date().toISOString(),
+              };
+              setKasMasuk(prev => [item, ...prev]);
+              showToast(`Alhamdulillah, donasi QRIS ${donorName ? `dari ${donorName}` : ''} senilai Rp ${amount.toLocaleString('id-ID')} berhasil masuk kas!`);
+            }}
           />
         ) : (
           <div className="grid grid-cols-1 gap-6">
             
             {/* PORTAL NAVIGATION TAB SELECTOR */}
-            <div className="flex space-x-1 border-b border-slate-200 overflow-x-auto pb-1.5">
+            <div className="sticky top-0 z-40 bg-slate-50/95 backdrop-blur-md pt-3 pb-2 border-b border-slate-200 flex space-x-1 overflow-x-auto shadow-sm -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
               <button
                 id="tab-ringkasan"
                 onClick={() => setActiveTab('ringkasan')}
@@ -377,6 +392,18 @@ export default function App() {
                 📝 Rapat &amp; Pengajuan
               </button>
 
+              <button
+                id="tab-qris"
+                onClick={() => setActiveTab('qris')}
+                className={`py-2 px-4 border-b-2 font-bold text-xs uppercase tracking-wider transition text-amber-800 bg-amber-50 rounded-t-xl ${
+                  activeTab === 'qris'
+                    ? 'border-amber-600 text-amber-900 bg-amber-100 font-black'
+                    : 'border-transparent hover:bg-amber-100/30'
+                }`}
+              >
+                💸 Simulasi QRIS Donasi
+              </button>
+
               {currentUser.role === 'Super Admin' && (
                 <button
                   id="tab-users"
@@ -391,11 +418,7 @@ export default function App() {
                 </button>
               )}
 
-<<<<<<< HEAD
               {currentUser.email.trim().toLowerCase() === 'bukukassekolah@gmail.com' && (
-=======
-              {currentUser.email.toLowerCase() === 'bukukassekolah@gmail.com' && (
->>>>>>> 5c0a7516461135a0c0f8f8c3448d54a199890e9a
                 <button
                   id="tab-export"
                   onClick={() => setActiveTab('export')}
@@ -468,20 +491,32 @@ export default function App() {
                 />
               )}
 
-<<<<<<< HEAD
+              {activeTab === 'qris' && (
+                <QrisSimulationView
+                  onAddDonation={(amount, donorName, notes) => {
+                    const id = 'M-' + Math.floor(1000 + Math.random() * 9000);
+                    const item: KasMasuk = {
+                      id,
+                      tanggal: new Date().toISOString().slice(0, 10),
+                      kategori: 'Infaq & Sedekah',
+                      nominal: amount,
+                      keterangan: `Donasi QRIS Mandiri - ${donorName || 'Hamba Allah'} (${notes || 'Sedekah Mandiri QRIS'})`,
+                      inputOleh: 'sistem.qris@masjid.org',
+                      timestamp: new Date().toISOString(),
+                    };
+                    setKasMasuk(prev => [item, ...prev]);
+                    showToast(`Alhamdulillah, donasi QRIS ${donorName ? `dari ${donorName}` : ''} senilai Rp ${amount.toLocaleString('id-ID')} berhasil masuk kas!`);
+                  }}
+                />
+              )}
+
               {activeTab === 'export' && currentUser.email.trim().toLowerCase() === 'bukukassekolah@gmail.com' && (
-=======
-              {activeTab === 'export' && currentUser.email.toLowerCase() === 'bukukassekolah@gmail.com' && (
->>>>>>> 5c0a7516461135a0c0f8f8c3448d54a199890e9a
                 <ExportCenterView
                   kasMasuk={kasMasuk}
                   kasKeluar={kasKeluar}
                   inventaris={inventaris}
                   proposals={proposals}
-<<<<<<< HEAD
                   currentUser={currentUser}
-=======
->>>>>>> 5c0a7516461135a0c0f8f8c3448d54a199890e9a
                 />
               )}
             </div>
@@ -492,13 +527,28 @@ export default function App() {
       </main>
 
       {/* FOOTER */}
-      <footer className="mt-16 bg-slate-900 text-slate-500 py-8 border-t border-slate-800 text-center text-xs">
+      <footer className="mt-16 bg-slate-900 text-slate-500 py-8 border-t border-slate-800 text-center text-xs animate-fade-in">
         <div className="max-w-7xl mx-auto px-4 space-y-2">
           <p className="font-extrabold text-slate-400">🕌 KasMasjid v1.0 — Bagian dari Ekosistem e-Kas / KulinaSystem</p>
           <p>Didesain secara khusus untuk Dewan Kemakmuran Masjid (DKM). Transparansi Keuangan Berbasis Syariah.</p>
           <p className="text-[10px] text-slate-600">© 2026 KasMasjid. Seluruh hak cipta dilindungi undang-undang.</p>
         </div>
       </footer>
+
+      {/* FLOATING STICKY KONSULTASI BUTTON */}
+      <a
+        href="https://cdn.botpress.cloud/webchat/v3.6/shareable.html?configUrl=https://files.bpcontent.cloud/2025/09/25/07/20250925075110-TUJ9QG0T.json"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 right-6 z-50 flex items-center space-x-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs sm:text-sm px-4 py-3 sm:px-5 sm:py-3.5 rounded-full shadow-2xl hover:shadow-[0_10px_30px_rgba(16,185,129,0.3)] transition-all duration-300 hover:scale-105 active:scale-95 group border border-emerald-400/20"
+        id="btn-sticky-konsultasi"
+      >
+        <span className="flex h-3 w-3 relative">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500 animate-pulse"></span>
+        </span>
+        <span className="tracking-wide uppercase font-black">💬 Konsultasi e-Kas</span>
+      </a>
 
     </div>
   );
