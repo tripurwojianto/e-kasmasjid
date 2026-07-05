@@ -73,11 +73,19 @@ export default function RoleSimulator({
                 }}
                 className="bg-white border border-amber-200 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500"
               >
-                {allUsers.map((u) => (
-                  <option key={u.email} value={u.email}>
-                    {u.nama} ({u.role})
-                  </option>
-                ))}
+                {allUsers
+                  .filter((u) => {
+                    // Sembunyikan owner (bukukassekolah@gmail.com) jika pengguna aktif saat ini bukan owner
+                    if (u.email === 'bukukassekolah@gmail.com') {
+                      return currentUser.email === 'bukukassekolah@gmail.com';
+                    }
+                    return true;
+                  })
+                  .map((u) => (
+                    <option key={u.email} value={u.email}>
+                      {u.nama} ({u.role})
+                    </option>
+                  ))}
               </select>
             </div>
           )}

@@ -3,11 +3,144 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Camera, Upload, AlertCircle, Sparkles, CheckCircle2, RefreshCw, X, ArrowRight, BookOpen } from 'lucide-react';
+import { Html5Qrcode } from 'html5-qrcode';
 
 interface QrisSimulationViewProps {
   onAddDonation: (amount: number, donorName: string, notes: string) => void;
 }
+
+// Helper to parse standard QRIS strings and other format fallbacks
+function parseQrisString(qris: string) {
+  if (!qris || qris.trim() === '') return null;
+  const text = qris.trim();
+
+  // 1. QRIS standard starting with 000201
+  if (text.startsWith("000201")) {
+    let index = 6;
+    let amount: number | null = null;
+    let merchantName: string | null = null;
+    let reference: string | null = null;
+    
+    while (index < text.length) {
+      if (index + 4 > text.length) break;
+      const tag = text.substring(index, index + 2);
+      const lengthStr = text.substring(index + 2, index + 4);
+      const length = parseInt(lengthStr, 10);
+      if (isNaN(length)) break;
+      
+      index += 4;
+      if (index + length > text.length) break;
+      const value = text.substring(index, index + length);
+      index += length;
+      
+      if (tag === '54') {
+        const parsedAmt = parseFloat(value);
+        if (!isNaN(parsedAmt)) {
+          amount = parsedAmt;
+        }
+      } else if (tag === '59') {
+        merchantName = value;
+      } else if (tag === '62') {
+        let subIndex = 0;
+        while (subIndex < value.length) {
+          if (subIndex + 4 > value.length) break;
+          const subTag = value.substring(subIndex, subIndex + 2);
+          const subLength = parseInt(value.substring(subIndex + 2, subIndex + 4), 10);
+          if (isNaN(subLength)) break;
+          subIndex += 4;
+          if (subIndex + subLength > value.length) break;
+          const subValue = value.substring(subIndex, subIndex + subLength);
+          subIndex += subLength;
+          
+          if (subTag === '01') {
+            reference = subValue;
+          }
+        }
+      }
+    }
+    return {
+      type: 'QRIS Standard (EMVCo)',
+      amount,
+      merchantName,
+      reference,
+      notes: reference ? `QRIS Ref: ${reference}` : (merchantName ? `QRIS Donasi: ${merchantName}` : 'Infaq QRIS Standar')
+    };
+  }
+
+  // 2. URL parsing fallback (e.g., https://kasmasjid.web.id/pay?amount=75000&donor=Budi&notes=Infaq_Jumat)
+  try {
+    const url = new URL(text);
+    const amountParam = url.searchParams.get('amount') || url.searchParams.get('total') || url.searchParams.get('value');
+    const donorParam = url.searchParams.get('donor') || url.searchParams.get('name') || url.searchParams.get('donorName');
+    const notesParam = url.searchParams.get('notes') || url.searchParams.get('desc') || url.searchParams.get('keterangan');
+    
+    if (amountParam) {
+      const parsedAmount = parseFloat(amountParam);
+      if (!isNaN(parsedAmount)) {
+        return {
+          type: 'E-Donation Link (URL)',
+          amount: parsedAmount,
+          donorName: donorParam ? decodeURIComponent(donorParam) : null,
+          notes: notesParam ? decodeURIComponent(notesParam) : `Sedekah Link QR`
+        };
+      }
+    }
+  } catch (e) {
+    // Not a valid URL
+  }
+
+  // 3. JSON parsing fallback
+  try {
+    const data = JSON.parse(text);
+    if (data.amount) {
+      const parsedAmount = parseFloat(data.amount);
+      if (!isNaN(parsedAmount)) {
+        return {
+          type: 'JSON E-Data',
+          amount: parsedAmount,
+          donorName: data.donorName || data.donor || null,
+          notes: data.notes || data.keterangan || 'Donasi Data QR'
+        };
+      }
+    }
+  } catch (e) {
+    // Not JSON
+  }
+
+  // 4. Plain Text Number extraction fallback
+  const numMatch = text.match(/\b\d{4,9}\b/);
+  if (numMatch) {
+    const parsedAmount = parseInt(numMatch[0], 10);
+    return {
+      type: 'Plain Text QR',
+      amount: parsedAmount,
+      donorName: null,
+      notes: `Donasi Terdeteksi dari QR: ${text.substring(0, 30)}`
+    };
+  }
+
+  return null;
+}
+
+const demoQrisPresets = [
+  {
+    title: '🕌 QRIS Dinamis Al-Amanah (Rp 25.000)',
+    description: 'QRIS dinamis resmi Bank Indonesia untuk infaq rutin Masjid Al-Amanah.',
+    raw: '00020101021226590016ID102030405060120110123456789020300351105204000053033605405250005802ID5917MASJID AL-AMANAH6005Depok62180110Ref-99120708Al-Amanah6304ABCD'
+  },
+  {
+    title: '🏗️ QRIS Wakaf Pembangunan (Rp 150.000)',
+    description: 'QRIS dinamis khusus untuk program wakaf pembangunan gedung dakwah.',
+    raw: '00020101021226590016ID1020304050601201101234567890203003511052040000530336054061500005802ID5917YAYASAN AL-FALAH6005Depok62190111Ref-FALAH0708Al-Falah6304BCDE'
+  },
+  {
+    title: '🌐 E-Donation URL (Rp 75.000 + Pesan)',
+    description: 'Link QR kustom berisi nominal donasi, nama penyumbang, dan doa khusus.',
+    raw: 'https://kasmasjid.web.id/pay?amount=75000&donor=Budi%20Santoso&notes=Sedekah%20Jumat%20Barokah'
+  }
+];
 
 export default function QrisSimulationView({ onAddDonation }: QrisSimulationViewProps) {
   const [donationStep, setDonationStep] = useState<'form' | 'qris' | 'verifying' | 'success'>('form');
@@ -19,6 +152,26 @@ export default function QrisSimulationView({ onAddDonation }: QrisSimulationView
   const [countdown, setCountdown] = useState(300); // 5 mins in seconds
   const [verificationProgress, setVerificationProgress] = useState(0);
   const [verificationStatus, setVerificationStatus] = useState('');
+
+  // QR Code Scanner States
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [scannedResult, setScannedResult] = useState<{
+    type: string;
+    amount: number | null;
+    merchantName?: string | null;
+    donorName?: string | null;
+    reference?: string | null;
+    notes?: string | null;
+    rawText: string;
+  } | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [activeScanTab, setActiveScanTab] = useState<'camera' | 'upload' | 'samples'>('camera');
+  const [cameraDevices, setCameraDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState<string>('');
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [uploadLoading, setUploadLoading] = useState(false);
+
+  const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
 
   // Countdown Timer for QRIS Validity
   useEffect(() => {
@@ -46,6 +199,154 @@ export default function QrisSimulationView({ onAddDonation }: QrisSimulationView
 
   const formatRupiah = (val: number) => {
     return 'Rp ' + val.toLocaleString('id-ID');
+  };
+
+  // Camera Management for scanning
+  useEffect(() => {
+    if (isScannerOpen && activeScanTab === 'camera') {
+      Html5Qrcode.getCameras()
+        .then((devices) => {
+          setCameraDevices(devices);
+          if (devices.length > 0) {
+            const backCam = devices.find(d => 
+              d.label.toLowerCase().includes('back') || 
+              d.label.toLowerCase().includes('environment') || 
+              d.label.toLowerCase().includes('belakang')
+            );
+            const defaultId = backCam ? backCam.id : devices[0].id;
+            setSelectedCameraId(defaultId);
+            startScanning(defaultId);
+          } else {
+            setScanError('Tidak menemukan perangkat kamera.');
+          }
+        })
+        .catch((err) => {
+          setScanError('Gagal mengakses kamera. Silakan periksa izin kamera browser.');
+          console.error(err);
+        });
+    } else {
+      stopScanning();
+    }
+
+    return () => {
+      stopScanning();
+    };
+  }, [isScannerOpen, activeScanTab]);
+
+  const startScanning = (cameraId: string) => {
+    stopScanning().then(() => {
+      setScanError(null);
+      setIsCameraActive(true);
+      
+      const html5QrCode = new Html5Qrcode("scanner-viewport");
+      html5QrCodeRef.current = html5QrCode;
+      
+      html5QrCode.start(
+        cameraId,
+        {
+          fps: 10,
+          qrbox: { width: 220, height: 220 }
+        },
+        (qrCodeMessage) => {
+          handleSuccessfulScan(qrCodeMessage);
+        },
+        (errorMessage) => {
+          // Verbose scanner feedback, safely ignore
+        }
+      ).catch((err) => {
+        setScanError('Gagal memulai kamera: ' + err);
+        setIsCameraActive(false);
+      });
+    });
+  };
+
+  const stopScanning = (): Promise<void> => {
+    if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
+      return html5QrCodeRef.current.stop()
+        .then(() => {
+          html5QrCodeRef.current = null;
+          setIsCameraActive(false);
+        })
+        .catch((err) => {
+          console.error("Gagal menghentikan scanner:", err);
+          html5QrCodeRef.current = null;
+          setIsCameraActive(false);
+        });
+    }
+    return Promise.resolve();
+  };
+
+  const handleSuccessfulScan = (rawText: string) => {
+    if (navigator.vibrate) {
+      navigator.vibrate(100);
+    }
+    
+    stopScanning();
+    
+    const parsed = parseQrisString(rawText);
+    if (parsed) {
+      setScannedResult({
+        ...parsed,
+        rawText
+      });
+      setScanError(null);
+    } else {
+      setScannedResult({
+        type: 'Teks Arbitrer / Custom QR',
+        amount: null,
+        rawText,
+        notes: rawText
+      });
+      setScanError('Format QR tidak mengandung data transaksi standar. Silakan masukkan nominal manual.');
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadLoading(true);
+    setScanError(null);
+    setScannedResult(null);
+
+    const fileScanner = new Html5Qrcode("scanner-file-hidden");
+    fileScanner.scanFile(file, true)
+      .then((qrCodeMessage) => {
+        setUploadLoading(false);
+        handleSuccessfulScan(qrCodeMessage);
+      })
+      .catch((err) => {
+        setUploadLoading(false);
+        setScanError('Gagal membaca QR Code dari gambar. Pastikan gambar cukup terang, terpusat, dan jelas.');
+        console.error(err);
+      });
+  };
+
+  const applyScannedResult = () => {
+    if (!scannedResult) return;
+    
+    if (scannedResult.amount) {
+      setDonationAmount(scannedResult.amount);
+      setCustomAmountStr(scannedResult.amount.toString());
+    }
+    
+    if (scannedResult.donorName) {
+      setDonorName(scannedResult.donorName);
+    }
+    
+    let combinedNotes = '';
+    if (scannedResult.merchantName) {
+      combinedNotes += `Penerima: ${scannedResult.merchantName}. `;
+    }
+    if (scannedResult.reference) {
+      combinedNotes += `Invoice: ${scannedResult.reference}. `;
+    }
+    if (scannedResult.notes) {
+      combinedNotes += scannedResult.notes;
+    }
+    
+    setDonorNotes(combinedNotes.trim() || 'Sedekah Hasil Scan QR');
+    setIsScannerOpen(false);
   };
 
   // Verification Progress simulation
@@ -99,6 +400,22 @@ export default function QrisSimulationView({ onAddDonation }: QrisSimulationView
           </div>
         </div>
 
+        {/* Real-world Scanning Feature Highlight Card */}
+        <div className="bg-gradient-to-br from-emerald-900 to-teal-950 border border-emerald-800 rounded-2xl p-5 text-white space-y-3 shadow-md">
+          <div className="flex items-center space-x-2">
+            <Sparkles className="h-5 w-5 text-amber-400 animate-pulse" />
+            <h5 className="text-xs font-black uppercase tracking-wider text-amber-300">Baru: Scan QR Code Donasi Riil</h5>
+          </div>
+          <p className="text-[11px] leading-relaxed text-slate-200">
+            Kini portal e-Kas mendukung pengisian data donasi otomatis menggunakan sensor pemindaian QRIS nyata!
+          </p>
+          <ul className="text-[10px] text-slate-300 space-y-1.5 list-disc list-inside">
+            <li>Dapat membaca QRIS standard EMVCo (GPN/E-Wallet).</li>
+            <li>Mengurai otomatis data nominal tersembunyi.</li>
+            <li>Mengisi nama donatur &amp; tujuan masjid secara instan.</li>
+          </ul>
+        </div>
+
         <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 text-slate-700 space-y-2 shadow-sm">
           <span className="text-xl">💡</span>
           <h5 className="text-xs font-extrabold uppercase tracking-wider text-slate-800">Bagaimana Cara Mengujinya?</h5>
@@ -121,6 +438,31 @@ export default function QrisSimulationView({ onAddDonation }: QrisSimulationView
                 Simulasi Kas Masuk via QRIS
               </span>
               <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-full">Active</span>
+            </div>
+
+            {/* Scanning Feature Entrance */}
+            <div className="bg-emerald-50/40 rounded-2xl p-4 border border-emerald-100 flex items-center justify-between gap-3 shadow-inner">
+              <div className="space-y-1">
+                <h6 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <Camera className="h-4 w-4 text-emerald-600" />
+                  <span>Scan QR Code Donasi Nyata</span>
+                </h6>
+                <p className="text-[10px] text-slate-500 leading-normal max-w-[280px]">
+                  Pindai brosur masjid, flyer, atau QRIS nyata untuk mengisi form secara otomatis.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsScannerOpen(true);
+                  setScannedResult(null);
+                  setScanError(null);
+                  setActiveScanTab('camera');
+                }}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[11px] px-3.5 py-2 rounded-xl transition shadow-sm shrink-0 cursor-pointer"
+              >
+                Mulai Pindai
+              </button>
             </div>
 
             <div className="space-y-3">
@@ -152,7 +494,7 @@ export default function QrisSimulationView({ onAddDonation }: QrisSimulationView
                         setDonationAmount(amount);
                         setCustomAmountStr('');
                       }}
-                      className={`py-2 px-1 rounded-xl text-xs font-bold transition border ${
+                      className={`py-2 px-1 rounded-xl text-xs font-bold transition border cursor-pointer ${
                         donationAmount === amount && !customAmountStr
                           ? 'bg-emerald-800 text-white border-emerald-800 shadow-sm'
                           : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
@@ -413,6 +755,293 @@ export default function QrisSimulationView({ onAddDonation }: QrisSimulationView
           </div>
         )}
       </div>
+
+      {/* Immersive Modal for QR Scanning and Decoding */}
+      {isScannerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-fade-in flex flex-col max-h-[90vh] overflow-y-auto">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center space-x-2.5">
+                <span className="text-xl">📷</span>
+                <div>
+                  <h4 className="font-black text-slate-900 text-sm uppercase tracking-wider">Pemindai QR Donasi</h4>
+                  <p className="text-[10px] text-slate-400 leading-normal">Pindai QR nyata atau pilih simulasi berkas</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  stopScanning();
+                  setIsScannerOpen(false);
+                }}
+                className="text-slate-400 hover:text-slate-600 p-1.5 hover:bg-slate-100 rounded-full transition cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Main Tabs */}
+            <div className="flex border-b border-slate-100 bg-slate-50 p-1 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setActiveScanTab('camera')}
+                className={`flex-1 py-1.5 text-[11px] font-extrabold rounded-lg transition uppercase tracking-wider flex items-center justify-center gap-1 cursor-pointer ${
+                  activeScanTab === 'camera'
+                    ? 'bg-white text-emerald-800 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Camera className="h-3.5 w-3.5" />
+                <span>Kamera</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveScanTab('upload')}
+                className={`flex-1 py-1.5 text-[11px] font-extrabold rounded-lg transition uppercase tracking-wider flex items-center justify-center gap-1 cursor-pointer ${
+                  activeScanTab === 'upload'
+                    ? 'bg-white text-emerald-800 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Upload className="h-3.5 w-3.5" />
+                <span>Unggah Gambar</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveScanTab('samples')}
+                className={`flex-1 py-1.5 text-[11px] font-extrabold rounded-lg transition uppercase tracking-wider flex items-center justify-center gap-1 cursor-pointer ${
+                  activeScanTab === 'samples'
+                    ? 'bg-white text-emerald-800 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <BookOpen className="h-3.5 w-3.5" />
+                <span>Kode Contoh</span>
+              </button>
+            </div>
+
+            {/* Error Message banner */}
+            {scanError && (
+              <div className="bg-rose-50 border border-rose-100 rounded-xl p-3 text-rose-800 flex items-start gap-2 text-[10px] leading-relaxed">
+                <AlertCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold">Kesalahan: </span>
+                  {scanError}
+                </div>
+              </div>
+            )}
+
+            {/* Scanned Result Card - Prominent Preview */}
+            {scannedResult && (
+              <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-4 space-y-3 shadow-inner">
+                <div className="flex items-center space-x-1.5 text-emerald-900 font-extrabold text-[11px] uppercase tracking-wider">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                  <span>QR Code Terbaca!</span>
+                </div>
+                
+                <div className="space-y-1.5 text-[10px] text-slate-700 bg-white p-3.5 rounded-xl border border-slate-100">
+                  <div className="flex justify-between border-b border-slate-100 pb-1.5">
+                    <span className="text-slate-400 font-semibold">Tipe Sumber QR:</span>
+                    <span className="font-extrabold text-blue-800 bg-blue-50 px-1.5 py-0.5 rounded text-[9px] uppercase">{scannedResult.type}</span>
+                  </div>
+
+                  {scannedResult.merchantName && (
+                    <div className="flex justify-between border-b border-slate-100 pb-1.5">
+                      <span className="text-slate-400 font-semibold">Tujuan / Merchant:</span>
+                      <span className="font-bold text-slate-800 text-right">{scannedResult.merchantName}</span>
+                    </div>
+                  )}
+
+                  {scannedResult.donorName && (
+                    <div className="flex justify-between border-b border-slate-100 pb-1.5">
+                      <span className="text-slate-400 font-semibold">Nama Donatur:</span>
+                      <span className="font-bold text-slate-800">{scannedResult.donorName}</span>
+                    </div>
+                  )}
+
+                  {scannedResult.reference && (
+                    <div className="flex justify-between border-b border-slate-100 pb-1.5">
+                      <span className="text-slate-400 font-semibold">Ref Invoice / Bill:</span>
+                      <span className="font-mono font-bold text-slate-600">{scannedResult.reference}</span>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-center pt-1">
+                    <span className="text-slate-800 font-bold">Nominal Donasi:</span>
+                    {scannedResult.amount ? (
+                      <span className="font-mono font-black text-xs text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">{formatRupiah(scannedResult.amount)}</span>
+                    ) : (
+                      <span className="text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-100 text-[9px]">User Input Manual</span>
+                    )}
+                  </div>
+
+                  {scannedResult.notes && (
+                    <div className="pt-2 border-t border-slate-100 mt-2">
+                      <span className="text-slate-400 font-semibold block mb-0.5">Catatan Terdeteksi:</span>
+                      <p className="p-2 bg-slate-50 rounded-lg text-[9px] text-slate-500 italic border border-slate-100 leading-normal">
+                        "{scannedResult.notes}"
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setScannedResult(null);
+                      if (activeScanTab === 'camera' && selectedCameraId) {
+                        startScanning(selectedCameraId);
+                      }
+                    }}
+                    className="py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-[11px] font-bold rounded-xl transition cursor-pointer text-center"
+                  >
+                    Atur Ulang
+                  </button>
+                  <button
+                    type="button"
+                    onClick={applyScannedResult}
+                    className="py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold rounded-xl transition flex items-center justify-center gap-1 shadow-sm cursor-pointer"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    <span>Konfirmasi &amp; Isi Form</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Tab 1: CAMERA SCANNING VIEWPORT */}
+            {activeScanTab === 'camera' && !scannedResult && (
+              <div className="space-y-4">
+                {/* Camera Selection Dropdown */}
+                {cameraDevices.length > 1 && (
+                  <div>
+                    <label className="block text-[9px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">Pilih Perangkat Kamera</label>
+                    <select
+                      value={selectedCameraId}
+                      onChange={(e) => {
+                        setSelectedCameraId(e.target.value);
+                        startScanning(e.target.value);
+                      }}
+                      className="w-full text-xs font-semibold p-2 border border-slate-200 bg-slate-50 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                    >
+                      {cameraDevices.map((device) => (
+                        <option key={device.id} value={device.id}>
+                          {device.label || `Kamera ${device.id.substring(0, 5)}`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Live Scanner Screen Frame */}
+                <div className="relative aspect-square w-full max-w-[280px] mx-auto bg-slate-900 rounded-2xl overflow-hidden border-2 border-slate-900 shadow-inner flex flex-col justify-center items-center">
+                  
+                  {/* Neon Target Scanner Box Overlay */}
+                  <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
+                    <div className="w-56 h-56 border-2 border-emerald-500/80 rounded-xl relative">
+                      {/* Bounding corner accents */}
+                      <span className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-emerald-400 -mt-1 -ml-1 rounded-tl"></span>
+                      <span className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-emerald-400 -mt-1 -mr-1 rounded-tr"></span>
+                      <span className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-emerald-400 -mb-1 -ml-1 rounded-bl"></span>
+                      <span className="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-emerald-400 -mb-1 -mr-1 rounded-br"></span>
+                      
+                      {/* Horizontal Scanning pulsing laser line */}
+                      <div className="absolute left-0 w-full h-0.5 bg-emerald-400 shadow-[0_0_10px_#34d399] animate-pulse" style={{ top: '45%' }}></div>
+                    </div>
+                  </div>
+
+                  {/* html5-qrcode live video mounts here */}
+                  <div id="scanner-viewport" className="w-full h-full object-cover"></div>
+
+                  {/* Loading camera indicator */}
+                  {!isCameraActive && (
+                    <div className="absolute inset-0 z-20 bg-slate-950 flex flex-col items-center justify-center space-y-2 text-white">
+                      <RefreshCw className="h-6 w-6 text-emerald-400 animate-spin" />
+                      <p className="text-[10px] text-slate-400">Menghubungkan aliran video...</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="text-center">
+                  <p className="text-[10px] text-slate-400 leading-normal max-w-sm mx-auto">
+                    Arahkan kamera ke QR Code atau QRIS donasi. Sensor pemindai akan mendeteksi dan mengurai isinya secara otomatis.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Tab 2: IMAGE FILE UPLOAD */}
+            {activeScanTab === 'upload' && !scannedResult && (
+              <div className="space-y-4">
+                <div className="border-2 border-dashed border-slate-200 hover:border-emerald-300 rounded-2xl p-6 transition flex flex-col items-center justify-center bg-slate-50/50 hover:bg-emerald-50/10 cursor-pointer relative min-h-[160px]">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                  />
+                  
+                  {uploadLoading ? (
+                    <div className="flex flex-col items-center space-y-2">
+                      <RefreshCw className="h-7 w-7 text-emerald-600 animate-spin" />
+                      <p className="text-[11px] font-bold text-emerald-800">Membaca berkas QR Code...</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center space-y-2 text-center">
+                      <div className="p-3 bg-slate-100 rounded-full text-slate-600">
+                        <Upload className="h-6 w-6" />
+                      </div>
+                      <p className="text-xs font-bold text-slate-700">Tarik &amp; taruh berkas gambar di sini</p>
+                      <p className="text-[10px] text-slate-400">Atau klik untuk menjelajahi berkas (Format: JPG, PNG, WebP)</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Hidden container required by html5-qrcode file API */}
+                <div id="scanner-file-hidden" className="hidden"></div>
+              </div>
+            )}
+
+            {/* Tab 3: SAMPLES PRESETS FOR SIMULATION */}
+            {activeScanTab === 'samples' && !scannedResult && (
+              <div className="space-y-3">
+                <p className="text-[10px] text-slate-500 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  💡 Tidak membawa QR Code nyata? Klik salah satu preset donasi nyata di bawah ini untuk mensimulasikan hasil dekoder QRIS/URL yang sukses dibaca oleh pemindai:
+                </p>
+
+                <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                  {demoQrisPresets.map((preset, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => {
+                        const parsed = parseQrisString(preset.raw);
+                        if (parsed) {
+                          setScannedResult({
+                            ...parsed,
+                            rawText: preset.raw
+                          });
+                          setScanError(null);
+                        }
+                      }}
+                      className="w-full text-left p-3 rounded-xl border border-slate-200/80 hover:border-emerald-300 hover:bg-emerald-50/30 transition duration-150 flex justify-between items-center gap-2 cursor-pointer"
+                    >
+                      <div className="space-y-0.5">
+                        <h6 className="text-[11px] font-black text-slate-800">{preset.title}</h6>
+                        <p className="text-[9px] text-slate-400 leading-normal">{preset.description}</p>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-emerald-600 shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

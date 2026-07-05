@@ -4,7 +4,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { User, KasMasuk, KasKeluar, InventarisLogistik, RapatPengajuan, Kategori } from './types';
+import { User, KasMasuk, KasKeluar, InventarisLogistik, RapatPengajuan, Kategori, Postingan, Komentar, WelcomeBannerConfig, ArsipItem } from './types';
+import { defaultWelcomeBannerConfig } from './components/WelcomeBanner';
 import {
   initialUsers,
   initialKasMasuk,
@@ -12,6 +13,7 @@ import {
   initialInventaris,
   initialRapatPengajuan,
   initialKategori,
+  initialPostingan,
 } from './mockData';
 import RoleSimulator from './components/RoleSimulator';
 import DashboardView from './components/DashboardView';
@@ -24,7 +26,9 @@ import UserManagementView from './components/UserManagementView';
 import ExportCenterView from './components/ExportCenterView';
 import QrisSimulationView from './components/QrisSimulationView';
 import LaporanBulananView from './components/LaporanBulananView';
-import { Home as HomeIcon, BarChart3, QrCode, Menu as MenuIcon, Lock, LogIn, LogOut, Check } from 'lucide-react';
+import PostingsView from './components/PostingsView';
+import ArchiveView, { initialArsipItems } from './components/ArchiveView';
+import { Home as HomeIcon, BarChart3, QrCode, Menu as MenuIcon, Lock, LogIn, LogOut, Check, HelpCircle, Megaphone, Folder } from 'lucide-react';
 
 export default function App() {
   // Load data from localStorage or fallback to mockData
@@ -95,6 +99,21 @@ export default function App() {
     return initialKategori;
   });
 
+  const [postings, setPostings] = useState<Postingan[]>(() => {
+    const saved = localStorage.getItem('kasmasjid_postings');
+    return saved ? JSON.parse(saved) : initialPostingan;
+  });
+
+  const [welcomeBanner, setWelcomeBanner] = useState<WelcomeBannerConfig>(() => {
+    const saved = localStorage.getItem('kasmasjid_welcome_banner');
+    return saved ? JSON.parse(saved) : defaultWelcomeBannerConfig;
+  });
+
+  const [arsip, setArsip] = useState<ArsipItem[]>(() => {
+    const saved = localStorage.getItem('kasmasjid_arsip');
+    return saved ? JSON.parse(saved) : initialArsipItems;
+  });
+
   // Simulator Sesi User Sesi (Default ke Owner jika ada, fallback ke Super Admin)
   const [currentUser, setCurrentUser] = useState<User>(() => {
     const savedUsers = localStorage.getItem('kasmasjid_users');
@@ -108,13 +127,13 @@ export default function App() {
   const [isPublicMode, setIsPublicMode] = useState(false);
 
   // Bottom Navigation tabs for public/guest mode
-  const [publicActiveTab, setPublicActiveTab] = useState<'home' | 'info' | 'donation'>('home');
+  const [publicActiveTab, setPublicActiveTab] = useState<'home' | 'info' | 'donation' | 'arsip'>('home');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showAdminLoginModal, setShowAdminLoginModal] = useState(false);
   const [adminLoginEmail, setAdminLoginEmail] = useState('bukukassekolah@gmail.com');
 
   // Active Tab for Admin Portal
-  const [activeTab, setActiveTab] = useState<'ringkasan' | 'masuk' | 'keluar' | 'logistik' | 'rapat' | 'users' | 'export' | 'qris' | 'laporan'>('ringkasan');
+  const [activeTab, setActiveTab] = useState<'ringkasan' | 'masuk' | 'keluar' | 'logistik' | 'rapat' | 'users' | 'export' | 'qris' | 'laporan' | 'postings' | 'arsip'>('ringkasan');
 
   // Toaster notifications
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
@@ -127,6 +146,14 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('kasmasjid_users', JSON.stringify(users));
   }, [users]);
+
+  useEffect(() => {
+    localStorage.setItem('kasmasjid_postings', JSON.stringify(postings));
+  }, [postings]);
+
+  useEffect(() => {
+    localStorage.setItem('kasmasjid_welcome_banner', JSON.stringify(welcomeBanner));
+  }, [welcomeBanner]);
 
   useEffect(() => {
     localStorage.setItem('kasmasjid_masuk', JSON.stringify(kasMasuk));
@@ -148,6 +175,10 @@ export default function App() {
     localStorage.setItem('kasmasjid_categories', JSON.stringify(categories));
   }, [categories]);
 
+  useEffect(() => {
+    localStorage.setItem('kasmasjid_arsip', JSON.stringify(arsip));
+  }, [arsip]);
+
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ show: true, message, type });
     setTimeout(() => {
@@ -156,6 +187,90 @@ export default function App() {
   };
 
   // Actions
+  const handleAddPost = (newPost: Omit<Postingan, 'id' | 'dibuatOleh' | 'namaPembuat' | 'timestamp'>) => {
+    const id = 'PST-' + Math.floor(1000 + Math.random() * 9000);
+    const item: Postingan = {
+      ...newPost,
+      id,
+      dibuatOleh: currentUser.email,
+      namaPembuat: currentUser.nama.split(' ')[0] || currentUser.nama || 'Sekretaris',
+      timestamp: new Date().toISOString(),
+    };
+    setPostings(prev => [item, ...prev]);
+    showToast(`Berhasil menerbitkan kabar baru (${id})`);
+  };
+
+  const handleDeletePost = (id: string) => {
+    setPostings(prev => prev.filter(item => item.id !== id));
+    showToast(`Berhasil menghapus kabar masjid.`);
+  };
+
+  const handleAddComment = (postId: string, comment: Omit<Komentar, 'id' | 'timestamp' | 'tanggal'>) => {
+    const id = 'CMT-' + Math.floor(1000 + Math.random() * 9000);
+    const item: Komentar = {
+      ...comment,
+      id,
+      tanggal: new Date().toISOString().slice(0, 10),
+      timestamp: new Date().toISOString(),
+    };
+    setPostings(prev => prev.map(post => {
+      if (post.id === postId) {
+        return {
+          ...post,
+          komentar: [item, ...(post.komentar || [])]
+        };
+      }
+      return post;
+    }));
+    showToast(`Komentar berhasil dikirim!`);
+  };
+
+  const handleDeleteComment = (postId: string, commentId: string) => {
+    setPostings(prev => prev.map(post => {
+      if (post.id === postId) {
+        return {
+          ...post,
+          komentar: (post.komentar || []).filter(c => c.id !== commentId)
+        };
+      }
+      return post;
+    }));
+    showToast(`Komentar berhasil dihapus.`);
+  };
+
+  const handleRegisterQrisDonation = (amount: number, donorName: string, notes: string, sourceLabel: string = 'Mandiri') => {
+    const id = 'M-' + Math.floor(1000 + Math.random() * 9000);
+    const item: KasMasuk = {
+      id,
+      tanggal: new Date().toISOString().slice(0, 10),
+      kategori: 'Infaq & Sedekah',
+      nominal: amount,
+      keterangan: `Donasi QRIS ${sourceLabel} - ${donorName || 'Hamba Allah'} (${notes || 'Sedekah'})`,
+      inputOleh: 'sistem.qris@masjid.org',
+      timestamp: new Date().toISOString(),
+    };
+    setKasMasuk(prev => [item, ...prev]);
+
+    // Update campaign if matched
+    if (notes) {
+      const match = notes.match(/Infaq Program:\s*(.+)/i);
+      if (match && match[1]) {
+        const campaignTitle = match[1].trim();
+        setPostings(prevPosts => prevPosts.map(p => {
+          if (p.judul.trim() === campaignTitle) {
+            return {
+              ...p,
+              terkumpulDonasi: (p.terkumpulDonasi || 0) + amount
+            };
+          }
+          return p;
+        }));
+      }
+    }
+
+    showToast(`Alhamdulillah, donasi QRIS ${donorName ? `dari ${donorName}` : ''} senilai Rp ${amount.toLocaleString('id-ID')} berhasil masuk kas!`);
+  };
+
   const handleAddKasMasuk = (newInflow: Omit<KasMasuk, 'id' | 'inputOleh' | 'timestamp'>) => {
     const id = 'M-' + Math.floor(1000 + Math.random() * 9000);
     const item: KasMasuk = {
@@ -264,6 +379,16 @@ export default function App() {
     }
     setUsers(prev => prev.filter(item => item.email !== email));
     showToast(`Berhasil menghapus pengurus: ${email}`);
+  };
+
+  const handleAddArsip = (item: ArsipItem) => {
+    setArsip(prev => [item, ...prev]);
+    showToast(`Berhasil menyimpan arsip baru ke Google Drive (${item.id})`);
+  };
+
+  const handleDeleteArsip = (id: string) => {
+    setArsip(prev => prev.filter(item => item.id !== id));
+    showToast('Berhasil menghapus dokumen arsip dari portal');
   };
 
   // Switch public view when toggle changes
@@ -412,20 +537,13 @@ export default function App() {
               <PublicTransparansiView
                 kasMasuk={kasMasuk}
                 kasKeluar={kasKeluar}
-                onAddDonation={(amount, donorName, notes) => {
-                  const id = 'M-' + Math.floor(1000 + Math.random() * 9000);
-                  const item: KasMasuk = {
-                    id,
-                    tanggal: new Date().toISOString().slice(0, 10),
-                    kategori: 'Infaq & Sedekah',
-                    nominal: amount,
-                    keterangan: `Donasi QRIS Mandiri - ${donorName || 'Hamba Allah'} (${notes || 'Sedekah Subuh'})`,
-                    inputOleh: 'sistem.qris@masjid.org',
-                    timestamp: new Date().toISOString(),
-                  };
-                  setKasMasuk(prev => [item, ...prev]);
-                  showToast(`Alhamdulillah, donasi QRIS ${donorName ? `dari ${donorName}` : ''} senilai Rp ${amount.toLocaleString('id-ID')} berhasil masuk kas!`);
-                }}
+                postings={postings}
+                onAddDonation={(amount, donorName, notes) => handleRegisterQrisDonation(amount, donorName, notes, 'Mandiri')}
+                onAddComment={handleAddComment}
+                onDeleteComment={handleDeleteComment}
+                currentUser={currentUser}
+                isPublicMode={isPublicMode}
+                welcomeBannerConfig={welcomeBanner}
               />
             )}
 
@@ -442,20 +560,21 @@ export default function App() {
               <div className="space-y-4 animate-fade-in">
                 <QrisSimulationView
                   onAddDonation={(amount, donorName, notes) => {
-                    const id = 'M-' + Math.floor(1000 + Math.random() * 9000);
-                    const item: KasMasuk = {
-                      id,
-                      tanggal: new Date().toISOString().slice(0, 10),
-                      kategori: 'Infaq & Sedekah',
-                      nominal: amount,
-                      keterangan: `Donasi QRIS Mandiri - ${donorName || 'Hamba Allah'} (${notes || 'Sedekah Mandiri QRIS'})`,
-                      inputOleh: 'sistem.qris@masjid.org',
-                      timestamp: new Date().toISOString(),
-                    };
-                    setKasMasuk(prev => [item, ...prev]);
-                    showToast(`Alhamdulillah, donasi QRIS ${donorName ? `dari ${donorName}` : ''} senilai Rp ${amount.toLocaleString('id-ID')} berhasil masuk kas!`);
+                    handleRegisterQrisDonation(amount, donorName, notes, 'Mandiri');
                     setPublicActiveTab('home');
                   }}
+                />
+              </div>
+            )}
+
+            {publicActiveTab === 'arsip' && (
+              <div className="space-y-4 animate-fade-in">
+                <ArchiveView
+                  arsip={arsip}
+                  onAddArsip={handleAddArsip}
+                  onDeleteArsip={handleDeleteArsip}
+                  currentUser={currentUser}
+                  isPublicMode={isPublicMode}
                 />
               </div>
             )}
@@ -573,6 +692,30 @@ export default function App() {
               </button>
 
               <button
+                id="tab-postings"
+                onClick={() => setActiveTab('postings')}
+                className={`py-2 px-4 border-b-2 font-bold text-xs uppercase tracking-wider transition ${
+                  activeTab === 'postings'
+                    ? 'border-emerald-600 text-emerald-700'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                }`}
+              >
+                📢 Berita
+              </button>
+
+              <button
+                id="tab-arsip"
+                onClick={() => setActiveTab('arsip')}
+                className={`py-2 px-4 border-b-2 font-bold text-xs uppercase tracking-wider transition ${
+                  activeTab === 'arsip'
+                    ? 'border-emerald-600 text-emerald-700'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                }`}
+              >
+                📁 Arsip Digital DKM
+              </button>
+
+              <button
                 id="tab-qris"
                 onClick={() => setActiveTab('qris')}
                 className={`py-2 px-4 border-b-2 font-bold text-xs uppercase tracking-wider transition text-amber-800 bg-amber-50 rounded-t-xl ${
@@ -621,6 +764,8 @@ export default function App() {
                   kasKeluar={kasKeluar}
                   inventaris={inventaris}
                   proposals={proposals}
+                  welcomeBannerConfig={welcomeBanner}
+                  onUpdateWelcomeBanner={setWelcomeBanner}
                 />
               )}
 
@@ -669,6 +814,17 @@ export default function App() {
                 />
               )}
 
+              {activeTab === 'postings' && (
+                <PostingsView
+                  currentUser={currentUser}
+                  postings={postings}
+                  onAdd={handleAddPost}
+                  onDelete={handleDeletePost}
+                  onAddComment={handleAddComment}
+                  onDeleteComment={handleDeleteComment}
+                />
+              )}
+
               {activeTab === 'users' && currentUser.role === 'Super Admin' && (
                 <UserManagementView
                   currentUser={currentUser}
@@ -680,20 +836,17 @@ export default function App() {
 
               {activeTab === 'qris' && (
                 <QrisSimulationView
-                  onAddDonation={(amount, donorName, notes) => {
-                    const id = 'M-' + Math.floor(1000 + Math.random() * 9000);
-                    const item: KasMasuk = {
-                      id,
-                      tanggal: new Date().toISOString().slice(0, 10),
-                      kategori: 'Infaq & Sedekah',
-                      nominal: amount,
-                      keterangan: `Donasi QRIS Mandiri - ${donorName || 'Hamba Allah'} (${notes || 'Sedekah Mandiri QRIS'})`,
-                      inputOleh: 'sistem.qris@masjid.org',
-                      timestamp: new Date().toISOString(),
-                    };
-                    setKasMasuk(prev => [item, ...prev]);
-                    showToast(`Alhamdulillah, donasi QRIS ${donorName ? `dari ${donorName}` : ''} senilai Rp ${amount.toLocaleString('id-ID')} berhasil masuk kas!`);
-                  }}
+                  onAddDonation={(amount, donorName, notes) => handleRegisterQrisDonation(amount, donorName, notes, 'Admin')}
+                />
+              )}
+
+              {activeTab === 'arsip' && (
+                <ArchiveView
+                  arsip={arsip}
+                  onAddArsip={handleAddArsip}
+                  onDeleteArsip={handleDeleteArsip}
+                  currentUser={currentUser}
+                  isPublicMode={isPublicMode}
                 />
               )}
 
@@ -728,6 +881,31 @@ export default function App() {
           <span className="text-[10px] tracking-tight">Home</span>
         </button>
 
+        <a
+          id="btn-nav-pengumuman"
+          href="/#pengumuman"
+          onClick={(e) => {
+            e.preventDefault();
+            if (!isPublicMode) {
+              setIsPublicMode(true);
+              setPublicActiveTab('home');
+              showToast('Membuka Berita');
+            } else {
+              setPublicActiveTab('home');
+            }
+            setTimeout(() => {
+              const element = document.getElementById('pengumuman');
+              if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }
+            }, 100);
+          }}
+          className={`flex flex-col items-center space-y-1 transition duration-200 cursor-pointer text-slate-400 hover:text-emerald-700`}
+        >
+          <Megaphone className="h-5 w-5" />
+          <span className="text-[10px] tracking-tight">Berita</span>
+        </a>
+
         <button
           id="btn-nav-info"
           onClick={handleNavInfo}
@@ -752,6 +930,29 @@ export default function App() {
         >
           <QrCode className="h-5 w-5" />
           <span className="text-[10px] tracking-tight font-medium">Donasi</span>
+        </button>
+
+        <button
+          id="btn-nav-arsip"
+          onClick={() => {
+            if (isPublicMode) {
+              setPublicActiveTab('arsip');
+            } else if (currentUser.role === 'Jemaah') {
+              setIsPublicMode(true);
+              setPublicActiveTab('arsip');
+              showToast('Masuk sebagai Tamu - Pustaka & Arsip');
+            } else {
+              setActiveTab('arsip');
+            }
+          }}
+          className={`flex flex-col items-center space-y-1 transition duration-200 cursor-pointer ${
+            (isPublicMode && publicActiveTab === 'arsip') || (!isPublicMode && currentUser.role !== 'Jemaah' && activeTab === 'arsip')
+              ? 'text-emerald-700 font-extrabold scale-110'
+              : 'text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          <Folder className="h-5 w-5" />
+          <span className="text-[10px] tracking-tight">Arsip</span>
         </button>
 
         <button
@@ -841,6 +1042,44 @@ export default function App() {
                 </span>
                 <span className="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded-full">Otomatis</span>
               </button>
+
+              <button
+                id="btn-menu-arsip-list"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  if (isPublicMode) {
+                    setPublicActiveTab('arsip');
+                  } else if (currentUser.role === 'Jemaah') {
+                    setIsPublicMode(true);
+                    setPublicActiveTab('arsip');
+                    showToast('Masuk sebagai Tamu - Pustaka & Arsip');
+                  } else {
+                    setActiveTab('arsip');
+                  }
+                }}
+                className="w-full text-left py-3 px-4 rounded-xl text-xs font-bold transition flex items-center justify-between border hover:bg-emerald-50/50 hover:border-emerald-200 bg-white border-slate-200 text-slate-700 cursor-pointer"
+              >
+                <span className="flex items-center space-x-2.5">
+                  <span className="text-sm">📁</span>
+                  <span>Pustaka &amp; Arsip Digital</span>
+                </span>
+                <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">Google Drive</span>
+              </button>
+
+              <a
+                id="btn-menu-pusat-bantuan"
+                href="https://www.kasmasjid.web.id"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setIsMenuOpen(false)}
+                className="w-full text-left py-3 px-4 rounded-xl text-xs font-extrabold transition flex items-center justify-between border hover:bg-emerald-50/50 border-emerald-100 bg-emerald-50/20 text-emerald-800 hover:border-emerald-200 cursor-pointer"
+              >
+                <span className="flex items-center space-x-2.5">
+                  <span className="text-sm">📖</span>
+                  <span>Pusat Bantuan (Blog)</span>
+                </span>
+                <span className="text-[10px] bg-emerald-100/70 text-emerald-800 font-bold px-2 py-0.5 rounded-full">Blog</span>
+              </a>
 
               <a
                 id="btn-menu-konsultasi"

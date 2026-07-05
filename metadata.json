@@ -1,6 +1,10 @@
 {
-  "name": "KasMasjid",
-  "description": "Sistem administrasi kas dan inventaris DKM Masjid dengan pembagian peran terintegrasi, laporan transparansi jemaah, dan modul ekspor kode Google Apps Script.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "name": "Remix: KasMasjid ",
+  "description": "Generate custom Google Apps Script code and automate your Google Workspace tasks with the power of artificial intelligence.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

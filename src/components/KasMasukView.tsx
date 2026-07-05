@@ -22,6 +22,7 @@ export default function KasMasukView({
   categories,
 }: KasMasukViewProps) {
   const [showForm, setShowForm] = useState(false);
+  const [deleteItem, setDeleteItem] = useState<KasMasuk | null>(null);
   const [tanggal, setTanggal] = useState(new Date().toISOString().split('T')[0]);
   const [kategori, setKategori] = useState('');
   const [keterangan, setKeterangan] = useState('');
@@ -433,8 +434,8 @@ _Laporan transparansi dikirim otomatis melalui sistem manajemen keuangan KasMasj
                     <td className="p-4 text-center">
                       {canDelete ? (
                         <button
-                          onClick={() => onDelete(item.id)}
-                          className="bg-red-50 hover:bg-red-100 text-red-600 px-2 py-1 rounded-lg text-[10px] font-bold transition"
+                          onClick={() => setDeleteItem(item)}
+                          className="bg-red-50 hover:bg-red-100 text-red-600 px-2 py-1 rounded-lg text-[10px] font-bold transition cursor-pointer"
                         >
                           Hapus
                         </button>
@@ -455,6 +456,50 @@ _Laporan transparansi dikirim otomatis melalui sistem manajemen keuangan KasMasj
           </table>
         </div>
       </div>
+
+      {/* Modal Konfirmasi Hapus */}
+      {deleteItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-100 space-y-4 animate-fade-in text-left">
+            <div className="flex items-center space-x-3 text-red-600">
+              <span className="text-2xl">⚠️</span>
+              <h4 className="font-extrabold text-base text-slate-900">Konfirmasi Hapus Transaksi</h4>
+            </div>
+            
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Apakah Anda yakin ingin menghapus catatan transaksi penerimaan kas ini? Tindakan ini tidak dapat dibatalkan.
+            </p>
+
+            <div className="bg-slate-50 p-4 rounded-xl space-y-1.5 border border-slate-100 text-xs text-slate-700">
+              <div className="flex justify-between"><span className="text-slate-400 font-semibold">ID Transaksi:</span> <span className="font-mono font-bold">{deleteItem.id}</span></div>
+              <div className="flex justify-between"><span className="text-slate-400 font-semibold">Tanggal:</span> <span className="font-semibold">{new Date(deleteItem.tanggal).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
+              <div className="flex justify-between"><span className="text-slate-400 font-semibold">Kategori:</span> <span className="font-bold text-blue-700">{deleteItem.kategori}</span></div>
+              <div className="flex justify-between"><span className="text-slate-400 font-semibold">Keterangan:</span> <span className="font-semibold text-slate-800 text-right max-w-[200px] truncate">{deleteItem.keterangan}</span></div>
+              <div className="flex justify-between border-t border-slate-200/60 pt-1.5 mt-1.5 font-bold"><span className="text-slate-900">Nominal:</span> <span className="font-mono text-emerald-700 font-black">{formatRupiah(deleteItem.nominal)}</span></div>
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteItem(null)}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-4 py-2.5 rounded-xl transition cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onDelete(deleteItem.id);
+                  setDeleteItem(null);
+                }}
+                className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow-sm cursor-pointer"
+              >
+                Ya, Hapus Permanen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

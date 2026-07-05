@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { User, KasMasuk, KasKeluar, InventarisLogistik, RapatPengajuan, Kategori } from './types';
+import { User, KasMasuk, KasKeluar, InventarisLogistik, RapatPengajuan, Kategori, Postingan } from './types';
 
 export const initialUsers: User[] = [
   {
@@ -269,4 +269,33 @@ export const initialKategori: Kategori[] = [
   { namaKategori: 'Konsumsi', jenis: 'Keluar' },
   { namaKategori: 'Listrik', jenis: 'Keluar' },
   { namaKategori: 'Perawatan', jenis: 'Keluar' },
+];
+
+export const initialPostingan: Postingan[] = [
+  {
+    id: 'PST-001',
+    tanggal: '2026-07-01',
+    judul: 'Kegiatan Sosial Khitanan Massal Gembira 1447 H',
+    konten: 'Assalamu\'alaikum Wr. Wb.\n\nDalam rangka menyambut tahun baru Islam, DKM Al-Amanah bekerja sama dengan tim medis setempat akan mengadakan acara "Khitanan Massal Gembira Gratis" bagi 50 anak yatim dan dhuafa di lingkungan sekitar masjid.\n\nKami membuka kesempatan emas bagi segenap jamaah sekalian untuk berkontribusi mendonasikan sebagian rezeki terbaiknya guna menyukseskan program kebaikan ini. Estimasi biaya per anak adalah Rp 350.000 (mencakup biaya medis, bingkisan baju koko, sarung, peci, uang saku khitan, dan konsumsi).\n\nMari bergotong-royong demi mengukir senyum di wajah mereka. Jazakumullah Khairan Katsiran.',
+    tipe: 'Ajakan Donasi',
+    tautanDonasi: true,
+    targetDonasi: 17500000,
+    terkumpulDonasi: 8500000,
+    gambarUrl: 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?q=80&w=800&auto=format&fit=crop',
+    dibuatOleh: 'sekretaris@masjid.org',
+    namaPembuat: 'Budi Raharjo',
+    timestamp: '2026-07-01T08:00:00Z'
+  },
+  {
+    id: 'PST-002',
+    tanggal: '2026-07-04',
+    judul: 'Penerimaan Penyaluran Wakaf Mushaf Al-Qur\'an Baru',
+    konten: 'Alhamdulillah, telah diterima sebanyak 50 mushaf Al-Qur\'an terjemahan baru bantuan dari Kedutaan Besar Arab Saudi yang saat ini telah ditempatkan di rak buku ruang utama masjid. Mushaf ini terbuka lebar untuk digunakan bertadarus oleh jamaah sekalian setelah salat rawatib.\n\nMohon kerja samanya untuk menjaga kebersihan mushaf dan mengembalikannya ke tempat semula setelah selesai dibaca. Semoga berkah bagi para pewakaf dan pembacanya.',
+    tipe: 'Informasi',
+    tautanDonasi: false,
+    gambarUrl: 'https://images.unsplash.com/photo-1609599006353-e629f1d00f18?q=80&w=800&auto=format&fit=crop',
+    dibuatOleh: 'sekretaris@masjid.org',
+    namaPembuat: 'Budi Raharjo',
+    timestamp: '2026-07-04T10:30:00Z'
+  }
 ];

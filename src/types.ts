@@ -66,3 +66,62 @@ export interface Kategori {
   namaKategori: string;
   jenis: 'Masuk' | 'Keluar';
 }
+
+export interface Komentar {
+  id: string;
+  nama: string;
+  email: string;
+  konten: string;
+  tanggal: string;
+  role: string;
+  timestamp: string;
+}
+
+export interface Postingan {
+  id: string;
+  tanggal: string;
+  judul: string;
+  konten: string;
+  tipe: 'Pengumuman' | 'Ajakan Donasi' | 'Kegiatan' | 'Informasi';
+  tautanDonasi?: boolean;
+  targetDonasi?: number;
+  terkumpulDonasi?: number;
+  gambarUrl?: string;
+  dibuatOleh: string;
+  namaPembuat: string;
+  timestamp: string;
+  komentar?: Komentar[];
+}
+
+export interface ActivityItem {
+  id: string;
+  hari: string;
+  waktu: string;
+  kegiatan: string;
+  pemateri: string;
+}
+
+export interface WelcomeBannerConfig {
+  judul: string;
+  subjudul: string;
+  pesanSambutan: string;
+  aktif: boolean;
+  jadwalMingguan: ActivityItem[];
+}
+
+export interface ArsipItem {
+  id: string;
+  nama: string;
+  tipe: string;
+  kategori: 'kajian' | 'administrasi' | 'dokumentasi' | 'lainnya';
+  uploaderName: string;
+  uploaderRole: string;
+  tanggal: string;
+  fileId: string;
+  webViewLink?: string;
+  webContentLink?: string;
+  ukuran: string;
+  deskripsi?: string;
+}
+
+

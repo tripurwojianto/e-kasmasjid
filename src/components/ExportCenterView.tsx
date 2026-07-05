@@ -16,6 +16,116 @@ interface ExportCenterViewProps {
   currentUser: User;
 }
 
+function applyTheme(
+  code: string,
+  theme: 'emerald' | 'sapphire' | 'maroon',
+  tabName: 'Code.gs' | 'Index.html' | 'PublicIndex.html',
+  mosqueName: string,
+  mosqueSub: string
+): string {
+  let res = code;
+
+  // 1. Ganti nama masjid & sub-judul di file Code.gs
+  if (tabName === 'Code.gs') {
+    res = res.replace("Code.gs - Backend KasMasjid (e-Kas)", `Code.gs - Backend ${mosqueName}`);
+    res = res.replace(/htmlOutput\.setTitle\("KasMasjid — Amanah & Transparan"\)/g, `htmlOutput.setTitle("${mosqueName} — Amanah, Rapi, & Transparan")`);
+    
+    const themeNameStr = theme === 'emerald'
+      ? 'Emerald Classic (Hijau Islami)'
+      : theme === 'sapphire'
+      ? 'Midnight Sapphire (Biru Modern)'
+      : 'Maroon Heritage (Merah Klasik)';
+    
+    res = res.replace(
+      "Code.gs - Backend KasMasjid (e-Kas)",
+      `Code.gs - Backend KasMasjid (e-Kas)\n * Tema Tampilan: ${themeNameStr}`
+    );
+    res = res.replace(
+      'const SPREADSHEET_ID = "MASUKKAN_ID_SPREADSHEET_ANDA_DI_SINI";',
+      `const SPREADSHEET_ID = "MASUKKAN_ID_SPREADSHEET_ANDA_DI_SINI";\nconst ACTIVE_THEME = "${theme}"; // Tema aktif\nconst MOSQUE_NAME = "${mosqueName}"; // Nama masjid custom\nconst MOSQUE_SUB = "${mosqueSub}"; // Sub-judul/alamat custom`
+    );
+    return res;
+  }
+
+  // 2. Ganti nama masjid & sub-judul di file HTML (Index & PublicIndex)
+  if (tabName === 'Index.html' || tabName === 'PublicIndex.html') {
+    // Menyisipkan variabel tema yang dipilih ke dalam head HTML
+    res = res.replace(
+      '<head>',
+      `<head>\n  <script>\n    const ACTIVE_THEME = "${theme}";\n    const MOSQUE_NAME = "${mosqueName}";\n    const MOSQUE_SUB = "${mosqueSub}";\n  </script>`
+    );
+
+    // Ganti tag Title di HTML head
+    res = res.replace(/<title>KasMasjid — Amanah, Rapi, & Transparan<\/title>/g, `<title>${mosqueName} — Amanah, Rapi, & Transparan</title>`);
+    res = res.replace(/<title>Laporan Transparansi Jemaah — KasMasjid<\/title>/g, `<title>Laporan Transparansi Jemaah — ${mosqueName}</title>`);
+
+    // Ganti Title & Subtitle di Navbar Index.html
+    res = res.replace(/<span class="font-bold text-lg tracking-tight block">KasMasjid<\/span>/g, `<span class="font-bold text-lg tracking-tight block">${mosqueName}</span>`);
+    res = res.replace(/e-Kas & Logistik DKM/g, mosqueSub);
+    res = res.replace(/belum terdaftar di sistem pengurus KasMasjid\./g, `belum terdaftar di sistem pengurus ${mosqueName}.`);
+
+    // Ganti Title & Subtitle di Header PublicIndex.html
+    res = res.replace(/Laporan Keuangan & Kas Masjid/g, `Laporan Keuangan & Kas ${mosqueName}`);
+    res = res.replace(/Sistem Informasi Transparansi Keuangan Dewan Kemakmuran Masjid \(DKM\)\. Diaudit secara berkala untuk kemaslahatan umat\./g, mosqueSub);
+  }
+
+  if (theme === 'sapphire') {
+    res = res.replace(/KasMasjid — Amanah, Rapi, & Transparan/g, `${mosqueName} — Amanah, Rapi, & Transparan`);
+    res = res.replace(/Laporan Transparansi Jemaah — KasMasjid/g, `Laporan Transparansi Jemaah — ${mosqueName}`);
+    
+    // Emerald green palette mapped to sapphire blue/sky/indigo palette
+    res = res.replace(/emerald-950/g, 'slate-950');
+    res = res.replace(/emerald-900/g, 'slate-900');
+    res = res.replace(/emerald-800/g, 'blue-800');
+    res = res.replace(/emerald-700/g, 'blue-700');
+    res = res.replace(/emerald-600/g, 'sky-600');
+    res = res.replace(/emerald-500/g, 'sky-500');
+    res = res.replace(/emerald-400/g, 'sky-400');
+    res = res.replace(/emerald-300/g, 'sky-300');
+    res = res.replace(/emerald-200/g, 'blue-200');
+    res = res.replace(/emerald-100/g, 'blue-100');
+    res = res.replace(/emerald-50/g, 'blue-50');
+    
+    // Accent colors also change to blue-themed colors
+    res = res.replace(/teal-600/g, 'cyan-600');
+    res = res.replace(/teal-50/g, 'cyan-50');
+    res = res.replace(/teal-100/g, 'cyan-100');
+    res = res.replace(/teal-200/g, 'cyan-200');
+    res = res.replace(/teal-700/g, 'cyan-700');
+    
+    // Replace visual cues like Mosque Emoji with something matching
+    res = res.replace(/🕌/g, '🔵'); // Blue badge/orb
+  } else if (theme === 'maroon') {
+    res = res.replace(/KasMasjid — Amanah, Rapi, & Transparan/g, `${mosqueName} — Amanah, Rapi, & Transparan`);
+    res = res.replace(/Laporan Transparansi Jemaah — KasMasjid/g, `Laporan Transparansi Jemaah — ${mosqueName}`);
+
+    // Emerald green palette mapped to maroon red/rose palette
+    res = res.replace(/emerald-950/g, 'stone-950');
+    res = res.replace(/emerald-900/g, 'rose-950');
+    res = res.replace(/emerald-800/g, 'red-800');
+    res = res.replace(/emerald-700/g, 'red-700');
+    res = res.replace(/emerald-600/g, 'rose-600');
+    res = res.replace(/emerald-50/g, 'rose-50');
+    res = res.replace(/emerald-100/g, 'rose-100');
+    res = res.replace(/emerald-200/g, 'rose-200');
+    res = res.replace(/emerald-300/g, 'rose-300');
+    res = res.replace(/emerald-400/g, 'rose-400');
+    res = res.replace(/emerald-500/g, 'rose-500');
+    
+    // Accent colors also change to warm maroon/amber
+    res = res.replace(/teal-600/g, 'amber-600');
+    res = res.replace(/teal-50/g, 'amber-50');
+    res = res.replace(/teal-100/g, 'amber-100');
+    res = res.replace(/teal-200/g, 'amber-200');
+    res = res.replace(/teal-700/g, 'amber-700');
+    
+    // Replace visual cues like Mosque Emoji
+    res = res.replace(/🕌/g, '🔴'); // Red badge/orb
+  }
+
+  return res;
+}
+
 export default function ExportCenterView({
   kasMasuk,
   kasKeluar,
@@ -25,6 +135,9 @@ export default function ExportCenterView({
 }: ExportCenterViewProps) {
   const [activeCodeTab, setActiveCodeTab] = useState<'Code.gs' | 'Index.html' | 'PublicIndex.html'>('Code.gs');
   const [copied, setCopied] = useState(false);
+  const [selectedTheme, setSelectedTheme] = useState<'emerald' | 'sapphire' | 'maroon'>('emerald');
+  const [customMosqueName, setCustomMosqueName] = useState('KasMasjid (e-Kas)');
+  const [customMosqueSub, setCustomMosqueSub] = useState('Sistem Transparansi Keuangan & Logistik DKM');
 
   // PDF report states
   const [filterPeriod, setFilterPeriod] = useState<'all' | '30' | '90' | 'current_month'>('all');
@@ -33,17 +146,29 @@ export default function ExportCenterView({
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [pdfSuccessMessage, setPdfSuccessMessage] = useState('');
 
-  const activeCode =
+  const activeCodeRaw =
     activeCodeTab === 'Code.gs'
       ? gasCodeGS
       : activeCodeTab === 'Index.html'
       ? gasIndexHTML
       : gasPublicHTML;
 
+  const activeCode = applyTheme(activeCodeRaw, selectedTheme, activeCodeTab, customMosqueName, customMosqueSub);
+
   const handleCopy = () => {
     navigator.clipboard.writeText(activeCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDownloadFile = () => {
+    const blob = new Blob([activeCode], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', url);
+    linkElement.setAttribute('download', activeCodeTab);
+    linkElement.click();
+    URL.revokeObjectURL(url);
   };
 
   const downloadBackupJSON = () => {
@@ -761,6 +886,213 @@ export default function ExportCenterView({
 
       {/* Code Blocks Area on Right */}
       <div className="lg:col-span-2 space-y-4">
+        {/* Pilihan Tema (Theme Selection) */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h4 className="text-sm font-extrabold text-slate-800">🎨 Pilih Tema Aplikasi KasMasjid</h4>
+              <p className="text-xs text-slate-500">
+                Pilih tema visual di bawah ini sebelum menyalin atau mengunduh kode. Seluruh file Code.gs dan HTML akan menyesuaikan otomatis!
+              </p>
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600 px-2 py-1 rounded">
+              3 Pilihan Tema Aktif
+            </span>
+          </div>
+
+          {/* Custom Identity Inputs */}
+          <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            <div>
+              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+                🕌 Nama Masjid / Judul Utama
+              </label>
+              <input
+                id="custom-mosque-name"
+                type="text"
+                value={customMosqueName}
+                onChange={(e) => setCustomMosqueName(e.target.value)}
+                placeholder="Contoh: Kas Masjid Al Muhajirin"
+                className="mt-1 block w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-800 font-bold focus:outline-hidden focus:ring-1 focus:ring-emerald-600 focus:border-emerald-600 shadow-xs"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
+                📍 Alamat / Sub-judul / Logistik DKM
+              </label>
+              <input
+                id="custom-mosque-sub"
+                type="text"
+                value={customMosqueSub}
+                onChange={(e) => setCustomMosqueSub(e.target.value)}
+                placeholder="Contoh: Jalan Melati no. 1 Dawuan Tengah Cikampek"
+                className="mt-1 block w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-800 font-bold focus:outline-hidden focus:ring-1 focus:ring-emerald-600 focus:border-emerald-600 shadow-xs"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+            {/* Emerald Classic */}
+            <button
+              id="theme-emerald"
+              onClick={() => setSelectedTheme('emerald')}
+              className={`flex items-center space-x-3 p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                selectedTheme === 'emerald'
+                  ? 'border-emerald-500 bg-emerald-50/50 ring-2 ring-emerald-500/20'
+                  : 'border-slate-100 hover:border-slate-300 bg-white'
+              }`}
+            >
+              <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-white shadow-sm font-bold text-xs">
+                🕌
+              </div>
+              <div>
+                <span className="text-xs font-bold text-slate-900 block">Emerald Classic</span>
+                <span className="text-[10px] text-emerald-700 font-medium">Hijau Islami Traditional</span>
+              </div>
+            </button>
+
+            {/* Midnight Sapphire */}
+            <button
+              id="theme-sapphire"
+              onClick={() => setSelectedTheme('sapphire')}
+              className={`flex items-center space-x-3 p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                selectedTheme === 'sapphire'
+                  ? 'border-blue-500 bg-blue-50/50 ring-2 ring-blue-500/20'
+                  : 'border-slate-100 hover:border-slate-300 bg-white'
+              }`}
+            >
+              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-sm font-bold text-xs">
+                🔵
+              </div>
+              <div>
+                <span className="text-xs font-bold text-slate-900 block">Midnight Sapphire</span>
+                <span className="text-[10px] text-blue-700 font-medium">Biru Modern &amp; Tech</span>
+              </div>
+            </button>
+
+            {/* Maroon Heritage */}
+            <button
+              id="theme-maroon"
+              onClick={() => setSelectedTheme('maroon')}
+              className={`flex items-center space-x-3 p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                selectedTheme === 'maroon'
+                  ? 'border-red-500 bg-rose-50/50 ring-2 ring-red-500/20'
+                  : 'border-slate-100 hover:border-slate-300 bg-white'
+              }`}
+            >
+              <div className="w-8 h-8 rounded-full bg-red-700 flex items-center justify-center text-white shadow-sm font-bold text-xs">
+                🔴
+              </div>
+              <div>
+                <span className="text-xs font-bold text-slate-900 block">Maroon Heritage</span>
+                <span className="text-[10px] text-red-700 font-medium">Merah Klasik &amp; Hangat</span>
+              </div>
+            </button>
+          </div>
+
+          {/* Visual Theme Preview Component */}
+          <div className="mt-4 border-t border-slate-100 pt-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wide flex items-center gap-1.5">
+                👁️ Live Pratinjau Tema: <span className="text-emerald-800 font-black">{selectedTheme === 'emerald' ? 'Emerald Classic' : selectedTheme === 'sapphire' ? 'Midnight Sapphire' : 'Maroon Heritage'}</span>
+              </span>
+              <span className="text-[9px] text-slate-400 font-bold bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
+                Visual Mockup
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Palette swatches */}
+              <div className="bg-slate-50/75 rounded-xl p-3 border border-slate-100 space-y-2">
+                <span className="text-[10px] font-bold text-slate-500 block">Palet Warna Utama (Tailwind CSS)</span>
+                <div className="flex items-center space-x-3">
+                  <div className="space-y-1 text-center">
+                    <div className={`w-10 h-10 rounded-lg shadow-sm ${
+                      selectedTheme === 'emerald' ? 'bg-emerald-800' : selectedTheme === 'sapphire' ? 'bg-blue-800' : 'bg-red-800'
+                    }`} />
+                    <span className="text-[9px] font-mono text-slate-500 block">Utama</span>
+                  </div>
+                  <div className="space-y-1 text-center">
+                    <div className={`w-10 h-10 rounded-lg shadow-sm ${
+                      selectedTheme === 'emerald' ? 'bg-emerald-600' : selectedTheme === 'sapphire' ? 'bg-sky-600' : 'bg-rose-600'
+                    }`} />
+                    <span className="text-[9px] font-mono text-slate-500 block">Sekunder</span>
+                  </div>
+                  <div className="space-y-1 text-center">
+                    <div className={`w-10 h-10 rounded-lg shadow-sm ${
+                      selectedTheme === 'emerald' ? 'bg-teal-600' : selectedTheme === 'sapphire' ? 'bg-cyan-600' : 'bg-amber-600'
+                    }`} />
+                    <span className="text-[9px] font-mono text-slate-500 block">Aksen</span>
+                  </div>
+                  <div className="space-y-1 text-center">
+                    <div className={`w-10 h-10 rounded-lg shadow-sm border border-slate-200 ${
+                      selectedTheme === 'emerald' ? 'bg-emerald-50' : selectedTheme === 'sapphire' ? 'bg-blue-50' : 'bg-rose-50'
+                    }`} />
+                    <span className="text-[9px] font-mono text-slate-500 block">Muda</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sample Mini UI Mockup */}
+              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs flex flex-col">
+                {/* Mockup Header */}
+                <div className={`px-3 py-2 text-white flex items-center justify-between transition-colors duration-300 ${
+                  selectedTheme === 'emerald' ? 'bg-emerald-900' : selectedTheme === 'sapphire' ? 'bg-slate-900' : 'bg-rose-950'
+                }`}>
+                  <div className="flex flex-col text-left min-w-0 flex-1 mr-2">
+                    <div className="flex items-center space-x-1">
+                      <span className="text-sm shrink-0">
+                        {selectedTheme === 'emerald' ? '🕌' : '🔴'}
+                      </span>
+                      <span className="text-[10px] font-extrabold tracking-tight truncate max-w-[130px]" title={customMosqueName}>
+                        {customMosqueName}
+                      </span>
+                    </div>
+                    <span className="text-[7px] text-white/70 font-bold truncate max-w-[140px] block mt-0.5" title={customMosqueSub}>
+                      {customMosqueSub}
+                    </span>
+                  </div>
+                  <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                    selectedTheme === 'emerald' ? 'bg-emerald-800 text-white' : selectedTheme === 'sapphire' ? 'bg-blue-800 text-white' : 'bg-red-800 text-white'
+                  }`}>
+                    ONLINE
+                  </span>
+                </div>
+
+                {/* Mockup Content body */}
+                <div className="p-3 space-y-2 text-left">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Saldo Kas Masjid</span>
+                    <span className={`text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded ${
+                      selectedTheme === 'emerald' ? 'bg-emerald-50 text-emerald-800 border border-emerald-100' : selectedTheme === 'sapphire' ? 'bg-blue-50 text-blue-800 border border-blue-100' : 'bg-rose-50 text-red-800 border border-rose-100'
+                    }`}>
+                      Kas Utama
+                    </span>
+                  </div>
+                  <div className={`text-sm font-black tracking-tight ${
+                    selectedTheme === 'emerald' ? 'text-emerald-800' : selectedTheme === 'sapphire' ? 'text-blue-800' : 'text-red-800'
+                  }`}>
+                    Rp 45.750.000
+                  </div>
+
+                  {/* Buttons and actions */}
+                  <div className="flex space-x-1.5 pt-1">
+                    <div className={`flex-1 text-center py-1 rounded text-[8px] font-bold transition-colors duration-300 text-white cursor-default ${
+                      selectedTheme === 'emerald' ? 'bg-emerald-700' : selectedTheme === 'sapphire' ? 'bg-blue-700' : 'bg-red-700'
+                    }`}>
+                      Masukan Kas
+                    </div>
+                    <div className={`flex-1 text-center py-1 rounded text-[8px] font-extrabold border transition-colors duration-300 cursor-default ${
+                      selectedTheme === 'emerald' ? 'border-emerald-200 text-emerald-700 bg-emerald-50/50' : selectedTheme === 'sapphire' ? 'border-blue-200 text-blue-700 bg-blue-50/50' : 'border-rose-200 text-red-700 bg-rose-50/50'
+                    }`}>
+                      Saran Jemaah
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col h-[650px]">
           {/* Header tabs */}
           <div className="bg-slate-50 border-b border-slate-100 px-4 py-3 flex justify-between items-center flex-wrap gap-2">
@@ -797,13 +1129,22 @@ export default function ExportCenterView({
               </button>
             </div>
 
-            <button
-              id="btn-copy-code"
-              onClick={handleCopy}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition shadow-sm cursor-pointer"
-            >
-              {copied ? 'Tersalin! ✓' : '📋 Salin Kode'}
-            </button>
+            <div className="flex items-center space-x-2">
+              <button
+                id="btn-download-code"
+                onClick={handleDownloadFile}
+                className="bg-slate-700 hover:bg-slate-800 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition shadow-sm cursor-pointer"
+              >
+                📥 Unduh {activeCodeTab}
+              </button>
+              <button
+                id="btn-copy-code"
+                onClick={handleCopy}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition shadow-sm cursor-pointer"
+              >
+                {copied ? 'Tersalin! ✓' : '📋 Salin Kode'}
+              </button>
+            </div>
           </div>
 
           {/* Syntax display block */}

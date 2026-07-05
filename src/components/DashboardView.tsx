@@ -4,8 +4,9 @@
  */
 
 import React from 'react';
-import { KasMasuk, KasKeluar, InventarisLogistik, RapatPengajuan } from '../types';
+import { KasMasuk, KasKeluar, InventarisLogistik, RapatPengajuan, WelcomeBannerConfig } from '../types';
 import { Heart, TrendingUp, Users, ArrowUpRight, DollarSign } from 'lucide-react';
+import { WelcomeBanner, WelcomeBannerEditor } from './WelcomeBanner';
 import {
   BarChart,
   Bar,
@@ -29,6 +30,8 @@ interface DashboardViewProps {
   kasKeluar: KasKeluar[];
   inventaris: InventarisLogistik[];
   proposals: RapatPengajuan[];
+  welcomeBannerConfig?: WelcomeBannerConfig;
+  onUpdateWelcomeBanner?: (newConfig: WelcomeBannerConfig) => void;
 }
 
 const COLORS = ['#059669', '#3b82f6', '#ef4444', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#6366f1'];
@@ -38,6 +41,8 @@ export default function DashboardView({
   kasKeluar,
   inventaris,
   proposals,
+  welcomeBannerConfig,
+  onUpdateWelcomeBanner,
 }: DashboardViewProps) {
   // Calculations
   const totalMasuk = kasMasuk.reduce((sum, item) => sum + item.nominal, 0);
@@ -116,12 +121,48 @@ export default function DashboardView({
   const maxDonation = kasMasuk.length > 0 ? Math.max(...kasMasuk.map(item => item.nominal)) : 0;
   const avgDonation = totalDonaturCount > 0 ? totalMasuk / totalDonaturCount : 0;
 
+  const [showBannerManager, setShowBannerManager] = React.useState(false);
+
   const formatRupiah = (val: number) => {
     return 'Rp ' + val.toLocaleString('id-ID');
   };
 
   return (
     <div id="dashboard-view-root" className="space-y-6">
+      {/* Banner & Schedule Management Card */}
+      <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-start space-x-3.5">
+          <span className="text-2xl">🕌</span>
+          <div className="space-y-1">
+            <h4 className="font-extrabold text-xs uppercase tracking-wider text-emerald-900">Banner Sambutan &amp; Jadwal Kegiatan Mingguan</h4>
+            <p className="text-xs text-emerald-800 leading-relaxed max-w-xl">
+              Kelola pesan sambutan jamaah di halaman utama dan jadwal ibadah/kajian rutin mingguan masjid untuk mengoptimalkan transparansi informasi.
+            </p>
+          </div>
+        </div>
+        <button
+          id="btn-toggle-banner-manager"
+          onClick={() => setShowBannerManager(!showBannerManager)}
+          className="sm:self-center bg-emerald-800 hover:bg-emerald-900 text-white font-extrabold text-[10px] uppercase tracking-wider px-4 py-2.5 rounded-xl shadow-xs transition cursor-pointer text-center shrink-0"
+        >
+          {showBannerManager ? '✕ Tutup Pengelola Banner' : '⚙️ Kelola & Pratinjau Banner'}
+        </button>
+      </div>
+
+      {showBannerManager && welcomeBannerConfig && onUpdateWelcomeBanner && (
+        <div className="space-y-6 animate-fade-in border border-slate-100 bg-slate-50/30 p-4 sm:p-6 rounded-2xl">
+          <div className="border-b border-slate-200 pb-2">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 bg-white border px-2.5 py-1 rounded-md">Pratinjau Live (Tampilan Jemaah)</span>
+          </div>
+          <WelcomeBanner config={welcomeBannerConfig} />
+          
+          <div className="border-b border-slate-200 pb-2 pt-2">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 bg-white border px-2.5 py-1 rounded-md">Panel Editor Admin</span>
+          </div>
+          <WelcomeBannerEditor config={welcomeBannerConfig} onUpdateConfig={onUpdateWelcomeBanner} />
+        </div>
+      )}
+
       {/* Cards stats row */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div id="card-saldo-kas" className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col justify-between">
