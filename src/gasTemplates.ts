@@ -127,7 +127,14 @@ function getActiveUserInfo() {
     }
   }
   
-  return { email: email, nama: nama, role: role };
+  let scriptUrl = "";
+  try {
+    scriptUrl = ScriptApp.getService().getUrl();
+  } catch (err) {
+    // fallback
+  }
+  
+  return { email: email, nama: nama, role: role, scriptUrl: scriptUrl };
 }
 
 // Helper: Ambil data sheet sebagai Array of Objects
@@ -660,24 +667,66 @@ export const gasIndexHTML = `<!DOCTYPE html>
   </nav>
 
   <!-- CONTENT WRAPPER -->
-  <main class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+  <main class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 pb-24 md:pb-8">
     
     <!-- AUTHENTICATION CHECK -->
     <template x-if="user.role === 'Jemaah'">
-      <div class="bg-white rounded-2xl shadow-xl p-8 max-w-md mx-auto text-center border border-slate-100">
-        <div class="text-5xl mb-4">🔒</div>
+      <div class="bg-white rounded-2xl shadow-xl p-8 max-w-lg mx-auto text-center border border-slate-100">
+        <div class="text-5xl mb-4 animate-bounce">🔒</div>
         <h3 class="text-xl font-bold text-slate-900">Akses Terkunci</h3>
-        <p class="text-slate-500 mt-2 text-sm leading-relaxed">
-          Akun Google Anda <span class="font-mono text-emerald-600 font-semibold" x-text="user.email"></span> belum terdaftar di sistem pengurus KasMasjid.
-        </p>
-        <div class="mt-6 p-4 bg-amber-50 rounded-lg text-left text-xs text-amber-800 border border-amber-200">
+        
+        <!-- JIKA EMAIL TERDETEKSI ADA -->
+        <template x-if="user.email">
+          <p class="text-slate-500 mt-2 text-sm leading-relaxed">
+            Akun Google Anda <span class="font-mono text-emerald-600 font-semibold" x-text="user.email"></span> belum terdaftar atau tidak aktif di sistem pengurus KasMasjid.
+          </p>
+        </template>
+        
+        <!-- JIKA EMAIL KOSONG (KARENA SETTING DEPLOYMENT EXECUTE AS ME) -->
+        <template x-if="!user.email">
+          <div class="mt-4 p-4 bg-rose-50 border border-rose-200 rounded-xl text-left text-xs text-rose-900 leading-relaxed">
+            <div class="font-bold flex items-center space-x-1.5 mb-1 text-rose-800 text-[13px]">
+              <span>⚠️</span>
+              <span>Penting: Email Anda Terdeteksi Kosong oleh Aplikasi!</span>
+            </div>
+            <p class="mb-2 font-medium text-rose-950">
+              Hal ini terjadi karena konfigurasi deployment Google Apps Script dipasang dengan opsi <b>"Jalankan sebagai: Saya (Me / Pemilik)"</b>, sehingga Google menyembunyikan identitas/email pengguna lain demi privasi.
+            </p>
+            <div class="border-t border-rose-200/50 pt-2 mt-2">
+              <p class="font-bold text-rose-800 mb-1">Cara Mengatasi agar Pengurus Lain bisa Login:</p>
+              <ol class="list-decimal pl-4 space-y-1 text-slate-700 font-normal">
+                <li>Buka editor Google Apps Script proyek ini.</li>
+                <li>Klik tombol <b>Terapkan (Deploy)</b> di kanan atas &gt; pilih <b>Kelola Penerapan (Manage Deployments)</b>.</li>
+                <li>Klik tombol <b>Edit (ikon pensil)</b> pada versi penerapan aktif Anda.</li>
+                <li>Ubah bagian <b>"Jalankan sebagai" (Execute as)</b> dari <i>"Saya" (Me)</i> menjadi <b>"User yang mengakses aplikasi web" (User accessing the web app)</b>.</li>
+                <li>Pastikan <b>"Siapa yang memiliki akses" (Who has access)</b> diatur ke <b>"Siapa saja" (Anyone)</b>.</li>
+                <li>Klik <b>Terapkan (Deploy)</b>.</li>
+              </ol>
+            </div>
+            <p class="mt-2 font-semibold text-rose-800">
+              *Catatan: File Google Spreadsheet "DB_KasMasjid" juga wajib dibagikan (Share) dengan akses minimal "Pelihat" (Viewer) ke email pengurus lainnya agar sistem dapat diakses oleh mereka.
+            </p>
+          </div>
+        </template>
+
+        <div class="mt-6 p-4 bg-amber-50 rounded-lg text-left text-xs text-amber-800 border border-amber-200" x-show="user.email">
           <strong>Perhatian:</strong> Silakan hubungi <b>Super Admin</b> atau Sekretaris DKM untuk mendaftarkan email Google ini agar Anda bisa login dan mengelola kas.
         </div>
+        
         <div class="mt-6 flex flex-col space-y-3">
-          <a href="https://accounts.google.com/Logout" target="_blank" class="bg-slate-800 hover:bg-slate-700 text-white font-medium py-2 px-4 rounded-xl text-sm transition shadow-sm">
-            Logout & Ganti Akun Google
+          <!-- TOMBOL MASUK SEBAGAI TAMU -->
+          <a :href="user.scriptUrl ? user.scriptUrl + '?page=public' : '#'" 
+             @click="if (!user.scriptUrl) { openPublicUrl(); $event.preventDefault(); }"
+             target="_top" 
+             class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition shadow flex items-center justify-center space-x-2 cursor-pointer">
+            <span>🔓 Masuk sebagai Tamu (Laporan Publik)</span>
           </a>
-          <button @click="window.location.reload()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-medium py-2 px-4 rounded-xl text-sm transition">
+          
+          <a :href="getLogoutUrl()" target="_top" class="bg-slate-800 hover:bg-slate-700 text-white font-medium py-2.5 px-4 rounded-xl text-sm transition shadow-sm block text-center cursor-pointer">
+            🔄 Logout & Ganti Akun Google
+          </a>
+          
+          <button @click="window.location.reload()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-medium py-2.5 px-4 rounded-xl text-sm transition">
             Perbarui Halaman
           </button>
         </div>
@@ -709,7 +758,7 @@ export const gasIndexHTML = `<!DOCTYPE html>
         </div>
 
         <!-- MODULE TABS -->
-        <div class="flex space-x-2 border-b border-slate-200 mb-8 overflow-x-auto pb-1">
+        <div class="hidden md:flex space-x-2 border-b border-slate-200 mb-8 overflow-x-auto pb-1">
           <button @click="currentTab = 'ringkasan'" :class="currentTab === 'ringkasan' ? 'border-emerald-600 text-emerald-700 font-bold' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'" class="py-2 px-4 border-b-2 font-medium text-sm whitespace-nowrap transition">
             📊 Ringkasan
           </button>
@@ -1037,6 +1086,65 @@ export const gasIndexHTML = `<!DOCTYPE html>
             </div>
           </div>
 
+        </div>
+
+        <!-- MOBILE BOTTOM NAVIGATION BAR -->
+        <div class="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200/85 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] px-4 py-2.5 flex justify-around items-center">
+          <button
+            @click="currentTab = 'ringkasan'"
+            :class="currentTab === 'ringkasan' ? 'text-emerald-700 font-extrabold scale-110' : 'text-slate-400 hover:text-slate-600'"
+            class="flex flex-col items-center space-y-1 transition duration-200 cursor-pointer"
+          >
+            <span class="text-lg">📊</span>
+            <span class="text-[10px] tracking-tight font-medium">Ringkasan</span>
+          </button>
+
+          <button
+            @click="currentTab = 'masuk'; fetchKasMasuk()"
+            :class="currentTab === 'masuk' ? 'text-emerald-700 font-extrabold scale-110' : 'text-slate-400 hover:text-slate-600'"
+            class="flex flex-col items-center space-y-1 transition duration-200 cursor-pointer"
+          >
+            <span class="text-lg">📈</span>
+            <span class="text-[10px] tracking-tight font-medium font-bold">Kas Masuk</span>
+          </button>
+
+          <button
+            @click="currentTab = 'keluar'; fetchKasKeluar()"
+            :class="currentTab === 'keluar' ? 'text-emerald-700 font-extrabold scale-110' : 'text-slate-400 hover:text-slate-600'"
+            class="flex flex-col items-center space-y-1 transition duration-200 cursor-pointer"
+          >
+            <span class="text-lg">📉</span>
+            <span class="text-[10px] tracking-tight font-medium font-bold">Kas Keluar</span>
+          </button>
+
+          <button
+            @click="currentTab = 'logistik'; fetchInventaris()"
+            :class="currentTab === 'logistik' ? 'text-emerald-700 font-extrabold scale-110' : 'text-slate-400 hover:text-slate-600'"
+            class="flex flex-col items-center space-y-1 transition duration-200 cursor-pointer"
+          >
+            <span class="text-lg">📦</span>
+            <span class="text-[10px] tracking-tight font-medium font-bold">Logistik</span>
+          </button>
+
+          <button
+            @click="currentTab = 'rapat'; fetchProposals()"
+            :class="currentTab === 'rapat' ? 'text-emerald-700 font-extrabold scale-110' : 'text-slate-400 hover:text-slate-600'"
+            class="flex flex-col items-center space-y-1 transition duration-200 cursor-pointer"
+          >
+            <span class="text-lg">📝</span>
+            <span class="text-[10px] tracking-tight font-medium font-bold">Rapat</span>
+          </button>
+
+          <template x-if="user.role === 'Super Admin'">
+            <button
+              @click="currentTab = 'user'; fetchUsers()"
+              :class="currentTab === 'user' ? 'text-emerald-700 font-extrabold scale-110' : 'text-slate-400 hover:text-slate-600'"
+              class="flex flex-col items-center space-y-1 transition duration-200 cursor-pointer"
+            >
+              <span class="text-lg">👥</span>
+              <span class="text-[10px] tracking-tight font-medium font-bold">User</span>
+            </button>
+          </template>
         </div>
 
       </div>
@@ -1600,11 +1708,23 @@ export const gasIndexHTML = `<!DOCTYPE html>
           this.fetchCategories();
         },
         openPublicUrl() {
-          // Menemukan URL saat ini & menambahkan parameter page=public
-          const currentUrl = window.location.href;
-          const urlObj = new URL(currentUrl);
-          urlObj.searchParams.set('page', 'public');
-          window.open(urlObj.toString(), '_blank');
+          let url;
+          if (this.user && this.user.scriptUrl) {
+            url = this.user.scriptUrl + '?page=public';
+          } else {
+            const currentUrl = window.location.href;
+            const urlObj = new URL(currentUrl);
+            urlObj.searchParams.set('page', 'public');
+            url = urlObj.toString();
+          }
+          window.open(url, '_blank');
+        },
+        getLogoutUrl() {
+          const scriptUrl = (this.user && this.user.scriptUrl) || '';
+          if (scriptUrl) {
+            return 'https://accounts.google.com/Logout?continue=' + encodeURIComponent('https://appengine.google.com/_ah/logout?continue=' + encodeURIComponent(scriptUrl));
+          }
+          return 'https://accounts.google.com/Logout';
         }
       }
     }
